@@ -10,7 +10,7 @@ clear
 close all
 
 subnum = '01';
-subinit = 'AV';
+subinit = 'CG';
 
 % these two contrasts have to correspond to copes 1 and 2!
 % contrasts = {'left>right','right>left'};
@@ -19,7 +19,7 @@ nHemis = length(hemis);
 
 retfolder = '/usr/local/serenceslab/Doreti/';
 subretfolder = [retfolder 'ANAT/' subinit '/'];
-exp_path = '/mnt/neurocube/local/serenceslab/maggie/faceDim/pilot4/';
+exp_path = '/mnt/neurocube/local/serenceslab/maggie/shapeDim/Pilot1/';
 func_path = [exp_path, 'DataPreproc/S', char(subnum), '/'];
 
 % load the annotation file so that we can get a list of all the names (this
@@ -47,13 +47,10 @@ for rr=1:length(ROIs)
 end
 clear info
 
-% this extension gets appended to the final nifti files for each volume,
-% indicating they were thresholded with this localizer.
-ROI_ext  = '_CATLOC';
 
-% cope 1 is face>place, cope 7 is face>blank, cope8 is face>object, cope9
-% is face>scrambled
-cope2use = 1;
+% cope 1 is face>place, cope 7 is object>scrambled
+cope2use = [1, 5];
+copenames = {'facecatloc','objcatloc'};
 
 % this first dir is a place to store the un-thresholded VOIs after they are
 % made, the second dir is our usual VOI folder
@@ -153,65 +150,104 @@ end
 
 %% now load the localizer, and mask out the parts we need
 
-% find stats map: cope1 should be faces>places
-stats_path = [exp_path 'AnalyzeCatLocalizer/S' char(subnum) '/feats/AllSessionsFE.gfeat/cope' num2str(cope2use) '.feat/stats/'];
-cd(stats_path)
+for cc=1:length(cope2use)
 
-%% load my t-stat map for all voxels
-nifti = load_nifti('tstat1.nii.gz');
-vmpVals = nifti.vol; %Store t-values for each voxel index that is in my visual areas in 'vmpVals'
+    % find stats map: cope1 should be faces>places
+    if strcmp(subnum,'01') && strcmp(subinit,'CG')  % this subject has just one run, therefore we must do the stats differently.
+        
+        stats_path = [exp_path 'AnalyzeCatLocalizer/S' char(subnum) '/feats/S01_01_013.feat/stats'];
 
-clear nifti
-%% find my threshold 
-% this is all copied from Find_t_thresh.m
+        cd(stats_path)
 
- % get FE dof
-[~, my_FE_dof] = unix('fslstats tdof_t1 -M'); % gives the dof I need for fixed effects (which is the test I ran), output is a string
+        % load my t-stat map for all voxels
+        nifti = load_nifti(['tstat' num2str(cope2use(cc)) '.nii.gz']);
+        vmpVals = nifti.vol; %Store t-values for each voxel index that is in my visual areas in 'vmpVals'
 
-% make log p-stats map
-unix(['ttologp -logpout logp1 varcope1 cope1 ', num2str(str2double(my_FE_dof))]);
+        clear nifti
+        %% find my threshold 
 
-% convert from log to p-value map
-unix(['fslmaths logp1 -exp p1']);
+         % get dof for my T map -load it from this file in stats folder
+        dof_file = fullfile(stats_path,'dof');
+        fid = fopen(dof_file,'r');
+        line = fgetl(fid);
+        fclose(fid);
+        my_dof = str2double(line);
+       
+        % make log p-stats map
+        unix(['ttologp -logpout logp1 varcope1 cope1 ', num2str(my_dof)]);
 
-% do FDR on p-value map and get probability threshold
-[~,prob_thresh] = unix('fdr -i p1 -q 0.05');
+        % convert from log to p-value map
+        unix(['fslmaths logp1 -exp p1']);
 
-% go from my p-threshold back into my t-stat
-my_t = abs(tinv(str2double(prob_thresh(28:end)),str2double(my_FE_dof)));
+        % do FDR on p-value map and get probability threshold
+        [~,prob_thresh] = unix('fdr -i p1 -q 0.05');
 
-%% define my final mask
+        % go from my p-threshold back into my t-stat
+        my_t = abs(tinv(str2double(prob_thresh(28:end)),my_dof));
 
-vals2use = vmpVals>my_t;
+        %% define my final mask
+        vals2use = vmpVals>my_t;
 
-%% create each VOI file
+    else
+        stats_path = [exp_path 'AnalyzeCatLocalizer/S' char(subnum) '/feats/AllSessionsFE.gfeat/cope' num2str(cope2use(cc)) '.feat/stats/'];
+        cd(stats_path)
+    %     % load my t-stat map for all voxels
+        nifti = load_nifti('tstat1.nii.gz');
+        vmpVals = nifti.vol; %Store t-values for each voxel index that is in my visual areas in 'vmpVals'
 
-for hh=1:length(hemis)
-     
-    for vv=1:length(ROIs)
+        clear nifti
+        %% find my threshold 
+        % this is all copied from Find_t_thresh.m
 
-        if exist([subretfolder, '/label/parcels_all/', hemis{hh}, '.', ROIs{vv}, '.label'], 'file')
+         % get FE dof
+        [~, my_FE_dof] = unix('fslstats tdof_t1 -M'); % gives the dof I need for fixed effects (which is the test I ran), output is a string
 
-            fullVOI = [VOIdir1 hemis{hh} '_' ROIs_4unix{vv} '.nii.gz'];
-            thisVOI = load_nifti(fullVOI);
+        % make log p-stats map
+        unix(['ttologp -logpout logp1 varcope1 cope1 ', num2str(str2double(my_FE_dof))]);
 
-            fullVol = thisVOI.vol;
+        % convert from log to p-value map
+        unix(['fslmaths logp1 -exp p1']);
 
-            maskedVol = fullVol & vals2use;
-    %         fprintf('%s %s %s: found %d voxels for %s\n',subinit,hemis{hh}, ROIs{vv},sum(maskedVol(:)),contrasts{cc});
+        % do FDR on p-value map and get probability threshold
+        [~,prob_thresh] = unix('fdr -i p1 -q 0.05');
 
-            if sum(maskedVol(:))>minVox
-                fprintf('%s %s %s: found %d voxels for faces\n',subinit,hemis{hh}, ROIs{vv},sum(maskedVol(:)));
-                newVOI = thisVOI;
-                newVOI.vol = maskedVol;
-                savename = [VOIdir2 hemis{hh} '_' ROIs_4saving{vv} ROI_ext '.nii.gz'];
-                err = save_nifti(newVOI,savename);
-                if err~=0
-                    error('error saving new VOI file')
+        % go from my p-threshold back into my t-stat
+        my_t = abs(tinv(str2double(prob_thresh(28:end)),str2double(my_FE_dof)));
+
+        %% define my final mask
+
+        vals2use = vmpVals>my_t;
+    end
+    %% create each VOI file
+
+    for hh=1:length(hemis)
+
+        for vv=1:length(ROIs)
+
+            if exist([subretfolder, '/label/parcels_all/', hemis{hh}, '.', ROIs{vv}, '.label'], 'file')
+
+                fullVOI = [VOIdir1 hemis{hh} '_' ROIs_4unix{vv} '.nii.gz'];
+                thisVOI = load_nifti(fullVOI);
+
+                fullVol = thisVOI.vol;
+
+                maskedVol = fullVol & vals2use;
+%                 fprintf('%s %s %s: found %d voxels for %s\n',subinit,hemis{hh}, ROIs{vv},sum(maskedVol(:)),contrasts{cc});
+
+                if sum(maskedVol(:))>minVox
+                    fprintf('%s %s %s: found %d voxels for %s\n',subinit,hemis{hh}, ROIs{vv},sum(maskedVol(:)),copenames{cc});
+                    newVOI = thisVOI;
+                    newVOI.vol = maskedVol;
+                    savename = [VOIdir2 hemis{hh} '_' ROIs_4saving{vv} '_' copenames{cc} '.nii.gz'];
+                    err = save_nifti(newVOI,savename);
+                    if err~=0
+                        error('error saving new VOI file')
+                    end
                 end
             end
+
         end
 
     end
-        
+    
 end

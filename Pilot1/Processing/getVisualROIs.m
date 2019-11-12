@@ -4,12 +4,12 @@ clear
 close all
 
 % set inputs
-FS_sbj = 'AV';
+FS_sbj = 'CG';
 subnum = '01';
 silent = 0;
 
 % set paths (end all with filesep!)
-experiment_path = '/mnt/neurocube/local/serenceslab/maggie/faceDim/pilot4/';
+experiment_path = '/mnt/neurocube/local/serenceslab/maggie/shapeDim/Pilot1/';
 % feat_path = [experiment_path, 'AnalyzeLocalizer/S', char(subnum), '/feats/AllSessionsFE.gfeat/cope1.feat/'];
 % out_path = [experiment_path, 'Samples/'];
 % beh_path = [experiment_path, 'DataBehavior/S', char(subnum), '/'];

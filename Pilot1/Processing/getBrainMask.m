@@ -15,8 +15,8 @@ clear
 close all
 
 sub = 'S01';
-sub_doreti = 'AV';
-exp_path = '/mnt/neurocube/local/serenceslab/maggie/faceDim/pilot4/';
+sub_doreti = 'CG';
+exp_path = '/mnt/neurocube/local/serenceslab/maggie/shapeDim/Pilot1/';
 doreti_path = '/usr/local/serenceslab/Doreti/';
 
 unzip = 0;

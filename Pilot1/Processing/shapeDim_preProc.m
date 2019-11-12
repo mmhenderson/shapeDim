@@ -9,16 +9,16 @@ clear
 close all
 
 sub = 'S01';
-sub_doreti = 'AV';
+sub_doreti = 'CG';
 % sub_exp = 'BX400';
-exp_path = '/mnt/neurocube/local/serenceslab/maggie/faceDim/pilot4/';
+exp_path = '/mnt/neurocube/local/serenceslab/maggie/shapeDim/Pilot1/';
 inID = 'topup.'; % will use this string to look for raw functional data (nifti)
-all_sessions = [1,2,3,4,5];   % this is the sessions that will be merged into your runs.list
-preproc_sessions = [5]; % this is the sessions that you actually want to pre-process now
+all_sessions = [1];   % this is the sessions that will be merged into your runs.list
+preproc_sessions = [1]; % this is the sessions that you actually want to pre-process now
 
 % what do you wanna do?
-WannaCoregister = 1;
-WannaTransform = 1;
+WannaCoregister = 0;
+WannaTransform = 0;
 WannaMC = 1;
 WannaDetrend = 1;
 
@@ -79,15 +79,11 @@ for session = all_sessions
         cd(char(raw_path(session)));
         runslist = fopen('runs.list','w');
         %Ask
-        exp = input(' which functional volumes were main face task? \n please indicate as follows: [1 2 3 4] etc \n --> ');
+        exp = input(' which functional volumes were main task? \n please indicate as follows: [1 2 3 4] etc \n --> ');
         floc = input(' which functional volumes were face category localizer? \n please indicate as follows: [1 2 3 4] etc \n --> ');
         mdloc = input(' which functional volumes were MD localizer? \n please indicate as follows: [1 2 3 4] etc \n --> ');
 
-        %         loc_ex_jitt = input(' which functional volumes were face exemplar localizers WITH jitter? \n please indicate as follows: [1 2 3 4] etc \n --> ');
-        race = input(' which functional volumes were race task? \n please indicate as follows: [1 2 3 4] etc \n --> ');
-        gend = input(' which functional volumes were gender task? \n please indicate as follows: [1 2 3 4] etc \n --> ');
-
-        all_vols = sort([exp,floc,mdloc,race,gend]);
+        all_vols = sort([exp,floc,mdloc]);
         for vols = 1:length(all_vols)
             %which volume is this
             volume = sprintf('%03d',vols);
@@ -95,9 +91,6 @@ for session = all_sessions
             if sum(exp==all_vols(vols))==1; text = [volume ' stim'];
             elseif sum(floc==all_vols(vols))==1; text = [volume ' floc'];
             elseif sum(mdloc==all_vols(vols))==1; text = [volume 'mdloc'];
-            elseif sum(race==all_vols(vols))==1; text = [volume ' race']; 
-            elseif sum(gend==all_vols(vols))==1; text = [volume ' gend']; 
-%             elseif sum(loc_dig==all_vols(vols))==1; text = [volume ' dig']; 
             end
             %write next line to 'runs.list'
             fprintf(runslist,'%s\n',text);

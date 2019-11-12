@@ -1,0 +1,150 @@
+% measure overall decodability of shapes
+
+%%
+clear
+close all
+
+sublist = {'01'};
+nSubj = length(sublist);
+my_dir = pwd;
+filesepinds = find(my_dir==filesep);
+root = my_dir(1:filesepinds(end)-1);
+savepath = fullfile(root, 'Analysis','Decoding_results','PairwiseAcc_MDLoc.mat');
+
+%% setup the grid
+nSets = 2;
+nStimsPerSet = 16;
+pairs = combnk(1:nStimsPerSet, 2);
+nPairs = size(pairs,1);
+     
+pairwise_dist = zeros(size(pairs,1),1);
+
+[xpoints,ypoints] = meshgrid(round(linspace(0.2, 4.8, 4),1), round(linspace(0.2, 4.8, 4),1));
+xpoints = xpoints(:);
+ypoints = ypoints(:);
+points = [xpoints, ypoints];
+
+for pp=1:size(pairs,1)
+    pairwise_dist(pp) = sqrt(sum((points(pairs(pp,1),:) - points(pairs(pp,2),:)).^2));
+end
+
+pairwise_dist_round = round(pairwise_dist*2)./2;
+
+[unvals, ia,ib] = unique(pairwise_dist_round);
+
+numeach = sum(repmat(ib, 1, numel(unvals))==repmat((1:numel(unvals)), numel(ib,1), 1), 1);
+
+%%
+for ss=1:nSubj
+   
+    fn2load = fullfile(root, 'Samples', sprintf('NeutralTaskSignalByTrial_MDLoc_S%s.mat', sublist{ss}));
+    load(fn2load);
+    
+    nVOIs = numel(mainSig);
+    
+    if ss==1
+        all_acc = zeros(nSubj, nVOIs, nSets, nPairs);
+    end
+
+    for vv=1:nVOIs
+        
+        dat = mainSig(vv).mainDat;
+        
+        runlabs = mainSig(vv).runLabs;
+        nRuns = numel(unique(runlabs));
+        nTrialsPerRun = numel(runlabs)/nRuns;
+        
+        stimlabs = mainSig(vv).StimLabels;
+        
+        % sets are always alternating on even and odd runs
+        setlabs = mod(runlabs,2)+1;
+        
+        % cross validate leaving out one run at a time
+        cvlabs = repelem(1:nRuns/2, nTrialsPerRun*2)';
+        nCV = numel(unique(cvlabs));
+        
+        for st = 1:nSets
+            for pp=1:nPairs
+
+                pairinds = (stimlabs==pairs(pp,1) | stimlabs==pairs(pp,2)) & setlabs==st;
+
+                label_all = nan(size(dat,1),1);
+
+                for cv=1:nCV
+
+                    trninds = pairinds & cvlabs~=cv;
+                    tstinds = pairinds & cvlabs==cv;
+
+                    stimlabs_trn = stimlabs(trninds);
+                    assert(numel(unique(stimlabs_trn))==2);
+                    assert(sum(stimlabs_trn==pairs(pp,1))==sum(stimlabs_trn==pairs(pp,2)));
+
+                    [label,~] = normEucDistClass(dat(trninds,:),dat(tstinds,:),stimlabs(trninds));
+
+                    label_all(tstinds) = label;
+
+                end
+
+                assert(~any(isnan(label_all(pairinds))))
+
+                acc = mean(label_all(pairinds)==stimlabs(pairinds));
+                fprintf('S%s, %s, set %d, pair %d: acc = %.2f percent\n',sublist{ss},my_areas{vv},st,pp, acc*100);
+                all_acc(ss,vv,st,pp) = acc;
+
+            end
+        end
+    end
+end
+
+%%
+save(savepath, 'all_acc','my_areas');
+
+%%
+for st=1:nSets
+    mean_acc =  mean(squeeze(all_acc(:,:,st,:)), 2);
+    se_acc = std(squeeze(all_acc(:,:,st,:)),[],2)./sqrt(nPairs);
+
+    plot_barsAndStars(mean_acc,se_acc,[],[],0.5,[0.4, 1],my_areas,[],'Accuracy',sprintf('Set %d\nMD-loc-defined ROIs: average of all pairwise classifiers',st),[])
+end
+%%
+
+v2plot = [1:8];
+ss=1;
+
+cols = plasma(numel(v2plot)+1);
+cols = cols(1:numel(v2plot),:);
+
+for st=1:nSets
+
+    figure;hold all;
+
+    for vv=1:numel(v2plot)
+
+
+        meanvals = zeros(size(unvals));
+        sevals = zeros(size(unvals));
+
+        for uu=1:length(unvals)
+
+            inds = pairwise_dist_round==unvals(uu);
+            meanvals(uu) = mean(all_acc(ss,v2plot(vv),st,inds));
+            sevals(uu) = std(all_acc(ss,v2plot(vv),st,inds))./sqrt(numel(inds));
+
+        end
+
+        errorbar(unvals, meanvals, sevals,'Color',cols(vv,:),'LineWidth',2);
+
+        xlabel('Distance between shapes in feature space')
+        ylabel('Decoding accuracy');
+
+
+    end
+    line(get(gca,'XLim'),[0.5, 0.5],'Color','k')
+
+    title(sprintf('Set %d\nDecoding accuracy vs. distance in feature space',st));
+    legend(my_areas(v2plot),'Location','EastOutside');
+    set(gcf,'Color','w');
+
+    ylim([0.4, 1])
+
+end

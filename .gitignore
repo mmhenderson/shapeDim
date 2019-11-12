@@ -1,0 +1,14 @@
+*.png
+*/*/*.m~
+*.m~
+*/*.m~
+BehavioralPilot/Data*
+BehavioralPilot/Stimuli/*full*
+BehavioralPilot/ODBStims/images
+Stimuli
+Pilot1/Data*
+Pilot1/AnalyzeCatLocalizer/S*
+Pilot1/AnalyzeMDLocalizer/S*
+Pilot1/Samples
+Pilot1/VOIs*
+

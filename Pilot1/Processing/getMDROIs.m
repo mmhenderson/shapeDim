@@ -1,19 +1,16 @@
-% Define ROIs that show selectivity for particular exemplars using the
-% neutral task (result of a one-way anova)
+% Define ROIs that show selectivity for hard>easy with MD localizer
 
 % we'll use the freesurfer automatic cortical parcellation to define rough anatomical parcels, then these
 % get thresholded with the face localizer and saved as final ROIs.
 
-% need to run the scripts in AnalyzeNeutralTask first.
+% Need to run GLM using feat to create the t-map first.
 
 %%
 clear 
 close all
 
 subnum = '01';
-subinit = 'AV';
-
-pthresh = 0.05;
+subinit = 'CG';
 
 % these two contrasts have to correspond to copes 1 and 2!
 % contrasts = {'left>right','right>left'};
@@ -22,7 +19,7 @@ nHemis = length(hemis);
 
 retfolder = '/usr/local/serenceslab/Doreti/';
 subretfolder = [retfolder 'ANAT/' subinit '/'];
-exp_path = '/mnt/neurocube/local/serenceslab/maggie/faceDim/pilot4/';
+exp_path = '/mnt/neurocube/local/serenceslab/maggie/shapeDim/Pilot1/';
 func_path = [exp_path, 'DataPreproc/S', char(subnum), '/'];
 
 % load the annotation file so that we can get a list of all the names (this
@@ -50,9 +47,10 @@ for rr=1:length(ROIs)
 end
 clear info
 
-% this extension gets appended to the final nifti files for each volume,
-% indicating they were thresholded with this localizer.
-ROI_ext  = '_EXLOC';
+
+% cope 1 is face>place, cope 7 is object>scrambled
+cope2use = [3];
+copenames = {'mdloc'};
 
 % this first dir is a place to store the un-thresholded VOIs after they are
 % made, the second dir is our usual VOI folder
@@ -87,7 +85,7 @@ if doVolumes
     if makelabs
         cd(retfolder)
         for hh=1:nHemis
- %             unix(['mri_annotation2label --annotation aparc.a2009s --subject ' subinit ' --hemi ' hemis{hh} ' --outdir ' subretfolder 'label/parcels_all/']); 
+%             unix(['mri_annotation2label --annotation aparc.a2009s --subject ' subinit ' --hemi ' hemis{hh} ' --outdir ' subretfolder 'label/parcels_all/']); 
             unix(['mri_annotation2label --annotation aparc --subject ' subinit ' --hemi ' hemis{hh} ' --outdir ' subretfolder 'label/parcels_all/']); 
 
         end
@@ -152,56 +150,67 @@ end
 
 %% now load the localizer, and mask out the parts we need
 
-% re-organize them into a table [nRuns x nVox] including only voxels in
-% vInd list
-pstats_nii = load_nifti([exp_path 'AnalyzeNeutralTask/S' subnum '/ExemplarSelectivity_p.nii']);
-pstats = pstats_nii.vol;
-% dims = size(pstats);
-% pstats = reshape(pstats,prod(dims(1:3)),dims(4))';
+for cc=1:length(cope2use)
 
-% this is a list of all the voxels that passed threshold 
-% voxels_thresholded = find(pstats<pthresh);
-vals2use = pstats<pthresh;
+    stats_path = [exp_path 'AnalyzeMDLocalizer/S' char(subnum) '/feats/AllSessionsFE.gfeat/cope' num2str(cope2use(cc)) '.feat/stats/'];
+    cd(stats_path)
+%     % load my t-stat map for all voxels
+    nifti = load_nifti('tstat1.nii.gz');
+    vmpVals = nifti.vol; %Store t-values for each voxel index that is in my visual areas in 'vmpVals'
 
-fprintf('over whole brain, %d voxels passed the F-test threshold on full training data set\n',sum(vals2use(:))), 
-% 
-% fstats_nii = load_nifti([experiment_path 'AnalyzeNeutralTask/S' subnum '/ExemplarSelectivity_F.nii']);
-% fstats = fstats_nii.vol(:);
-% dims = size(fstats);
-% fstats = reshape(fstats,prod(dims(1:3)),dims(4))';
+    clear nifti
+    %% find my threshold 
+    % this is all copied from Find_t_thresh.m
 
-%% define my final mask
+     % get FE dof
+    [~, my_FE_dof] = unix('fslstats tdof_t1 -M'); % gives the dof I need for fixed effects (which is the test I ran), output is a string
 
-% vals2use = voxels_thresholded;
+    % make log p-stats map
+    unix(['ttologp -logpout logp1 varcope1 cope1 ', num2str(str2double(my_FE_dof))]);
 
-%% create each VOI file
+    % convert from log to p-value map
+    unix(['fslmaths logp1 -exp p1']);
 
-for hh=1:length(hemis)
-     
-    for vv=1:length(ROIs)
+    % do FDR on p-value map and get probability threshold
+    [~,prob_thresh] = unix('fdr -i p1 -q 0.05');
 
-        if exist([subretfolder, '/label/parcels_all/', hemis{hh}, '.', ROIs{vv}, '.label'], 'file')
+    % go from my p-threshold back into my t-stat
+    my_t = abs(tinv(str2double(prob_thresh(28:end)),str2double(my_FE_dof)));
 
-            fullVOI = [VOIdir1 hemis{hh} '_' ROIs_4unix{vv} '.nii.gz'];
-            thisVOI = load_nifti(fullVOI);
+    %% define my final mask
 
-            fullVol = thisVOI.vol;
+    vals2use = vmpVals>my_t;
+    
+    %% create each VOI file
 
-            maskedVol = fullVol & vals2use;
-    %         fprintf('%s %s %s: found %d voxels for %s\n',subinit,hemis{hh}, ROIs{vv},sum(maskedVol(:)),contrasts{cc});
+    for hh=1:length(hemis)
 
-            if sum(maskedVol(:))>minVox
-                fprintf('%s %s %s: found %d voxels with exemplar selecivity in neutral task\n',subinit,hemis{hh}, ROIs{vv},sum(maskedVol(:)));
-                newVOI = thisVOI;
-                newVOI.vol = maskedVol;
-                savename = [VOIdir2 hemis{hh} '_' ROIs_4saving{vv} ROI_ext '.nii.gz'];
-                err = save_nifti(newVOI,savename);
-                if err~=0
-                    error('error saving new VOI file')
+        for vv=1:length(ROIs)
+
+            if exist([subretfolder, '/label/parcels_all/', hemis{hh}, '.', ROIs{vv}, '.label'], 'file')
+
+                fullVOI = [VOIdir1 hemis{hh} '_' ROIs_4unix{vv} '.nii.gz'];
+                thisVOI = load_nifti(fullVOI);
+
+                fullVol = thisVOI.vol;
+
+                maskedVol = fullVol & vals2use;
+%                 fprintf('%s %s %s: found %d voxels for %s\n',subinit,hemis{hh}, ROIs{vv},sum(maskedVol(:)),contrasts{cc});
+
+                if sum(maskedVol(:))>minVox
+                    fprintf('%s %s %s: found %d voxels for %s\n',subinit,hemis{hh}, ROIs{vv},sum(maskedVol(:)),copenames{cc});
+                    newVOI = thisVOI;
+                    newVOI.vol = maskedVol;
+                    savename = [VOIdir2 hemis{hh} '_' ROIs_4saving{vv} '_' copenames{cc} '.nii.gz'];
+                    err = save_nifti(newVOI,savename);
+                    if err~=0
+                        error('error saving new VOI file')
+                    end
                 end
             end
+
         end
 
     end
-        
+    
 end
