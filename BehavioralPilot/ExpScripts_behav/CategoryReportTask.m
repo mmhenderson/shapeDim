@@ -4,7 +4,7 @@
 % There are several divisions that can be used.
 % We'll present two prototype images to remind the subject which images are
 % which. 
-
+ 
 % WRITTEN FOR BEHAVIOR ROOMS (B,C,D)
 
 % parameters
