@@ -108,7 +108,7 @@ for st=1:nSets
 end
 %%
 
-v2plot = [1:8];
+v2plot = [1:5];
 ss=1;
 
 cols = plasma(numel(v2plot)+1);

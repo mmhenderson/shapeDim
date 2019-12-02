@@ -1,14 +1,16 @@
-% Get rough anatomical definitions of MD network ROIs
-
+% Get rough anatomical definitions of MD network ROIs.
+%
 % load the anatomical definitions of a parcellation of the MD network 
 % from Fedorenko, Duncan , & Kanwisher, 2013
 % downloaded from imaging.mrc-cbu.cam.ac.uk/imaging/MDsystem. 
 % This script will convert that nifti file into a new nifti in
 % the same coordinate system of the MNI-average brain from freesurfer. 
-% (all happens in TAL space).
+% (all happens in TAL space). This includes UPSAMPLING the resolution of
+% the volume from 2mm vox to 1mm vox. 
 % Next step is to project this file into subject (functional) space using
 % alignment between MNI-average brain and subject anatomical.
-
+% (getMDROIS.m does this)
+%
 % only need to run this once, it'll put a file in the
 % main preprocessing folder which can be used for all subs. 
 
