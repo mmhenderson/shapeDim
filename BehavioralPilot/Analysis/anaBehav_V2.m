@@ -228,11 +228,8 @@ for si = 1:nSubj
                     nRespGrid(si,curr_task,ind1,ind2,respind) = nRespGrid(si,curr_task,ind1,ind2,respind) + 1;
 
                 end
-                            end
-            
-            
+            end
         end
-        
     end
     %%
     if plotRTs
@@ -267,7 +264,8 @@ end
 meanvals = squeeze(nanmean(vals,1));
 sevals = squeeze(nanstd(vals,[],1))./sqrt(nSubj);
 errorbar(1:3, meanvals,sevals,'Color','k');
-
+plot([0,2.5],[0.5, 0.5],'Color','k','LineStyle','--');
+plot([2.5,4],[0.25, 0.25],'Color','k','LineStyle','--');
 xlabel(sprintf('Task'))
 ylabel(sprintf('Accuracy'));
 title(sprintf('Accuracy, averaged over runs'))

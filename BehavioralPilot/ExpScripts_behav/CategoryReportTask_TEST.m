@@ -119,6 +119,7 @@ try
     if p.debug
         % debug mode - do a few trials then quit
         p.nTrials = 8 ;
+        Screen('Preference','SkipSyncTests',1);
     elseif p.Training
         p.nTrials = 24;
     else
@@ -573,7 +574,7 @@ try
         % start checking responses as soon as stim comes up
         keepChecking = 1;
         
-        Screen('DrawTexture', w, allims(p.imlist(tt,1)).imtext,[],p.framePos);
+        Screen('DrawTexture', w, allims(tt).imtext,[],p.framePos);
         Screen('DrawDots', w, [0,0], p.fixSizePix, p.fixColor, p.centerPix, 0); 
         Screen('DrawingFinished', w);
 

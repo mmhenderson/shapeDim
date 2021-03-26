@@ -46,14 +46,15 @@ try
     
     % make a dialog box to enter things
     prompt = {'Debug mode?','Subject Initials','Subject Number','Session (1 or 2)',...
-        'Part (1-6)', 'Run Number (1 or 2)', 'Training Run? (0 or 1)','Image Set'};
+        'Part (1-3)', 'Run Number (1-3)', 'Training Run? (0 or 1)','Image Set'};
     dlgtitle = 'Enter Run Parameters';
     dims = [1 35];
     definput = {'0','XX','99','1','1','1','0','3'};
     answer = inputdlg(prompt,dlgtitle,dims,definput);
     p.debug = str2double(answer{1});
-    p.Subject = answer{2};
-    p.SubNum = sprintf('%02d',str2double(answer{3}));
+    p.SubInit = answer{2};
+    p.SubNum = str2double(answer{3});
+    p.SubNumStr = sprintf('%02d',str2double(answer{3}));
     p.Session = str2double(answer{4});
     p.Part = str2double(answer{5});
     p.RunNumThisPart = str2double(answer{6});
@@ -96,13 +97,13 @@ try
     t.TimeStamp = datestr(now,'HHMM'); %Timestamp for saving out a uniquely named datafile (so you will never accidentally overwrite stuff)
          
     if p.Training
-        p.expName = sprintf('ShapeTask_sess%d_part%d_TRAINING',p.Session,p.Part);
+        p.expName = sprintf('MainTask_sess%d_part%d_TRAINING',p.Session,p.Part);
     else
-        p.expName = sprintf('ShapeTask_sess%d_part%d',p.Session,p.Part);
+        p.expName = sprintf('MainTask_sess%d_part%d',p.Session,p.Part);
     end
     
-    p.fnsave_local = fullfile(datadir_local, ['S', p.SubNum, '_' p.expName '_' t.TheDate '.mat']);
-    p.fnsave_remote = fullfile(datadir_remote, ['S', p.SubNum, '_' p.expName '_' t.TheDate '.mat']);
+    p.fnsave_local = fullfile(datadir_local, ['S', p.SubNumStr, '_' p.expName '_' t.TheDate '.mat']);
+    p.fnsave_remote = fullfile(datadir_remote, ['S', p.SubNumStr, '_' p.expName '_' t.TheDate '.mat']);
     
     if exist(p.fnsave_local,'file')
         load(p.fnsave_local);
@@ -131,10 +132,10 @@ try
     
     % list the orders in which things will happen across entire experiment
     % [nParts x nSess]
-    bound_list = [1,2;1,2;2,1;2,1;3,3;3,3]; % which category boundary?
-    map_list = [1,2;2,1;1,2;2,1;1,2;2,1];   % which response mapping?
-    position_list = [1,2;1,2;1,2;1,2;1,2;1,2];  % which positions will we show prototypes on the screen?
-    
+    bound_list = [1,2;2,1;3,3];
+    map_list = [1,2;1,2;1,2];
+    position_list = [1,2;1,2;1,2];
+   
     if ~mod(p.SubNum,2)        
         % even num subject, start with second sess (otherwise start with
         % the first session)
@@ -271,6 +272,7 @@ try
     
     % quadrant is a fixed property of each image
     % category depends on the rule in place (which finger/side)
+    p.category = zeros(size(p.quadrant));
     p.category(ismember(p.quadrant, cat_groups(1,:)))= 1;
     p.category(ismember(p.quadrant, cat_groups(2,:)))= 2;
     
@@ -384,9 +386,9 @@ try
     % drawn in a frame slightly bigger than the screen, but all the shape pixels are
     % within the bounds of the screen.
 
-    p.protoStimHeightDeg = 10;
+    p.protoStimHeightDeg = 9;   % how big is each prototype image?
+    p.protoSpacingDeg = 1;  % how far apart are the four prototypes drawn?
     p.outlineProp = 0.9; % for the colored square outlines, how big are they relative to the image square size?
-    p.protoDistDeg = 4.8; % how far is center of prototype drawn from the center?
     p.feedbackTextHeightDeg = 8;
     p.rectColor = [0.1,0.8,0.1]*255;
     p.rectWidthDeg = 0.1;
@@ -436,8 +438,10 @@ try
     p.protoStimWidthPix = p.protoStimHeightPix*size(im,2)/size(im,1);
     p.boundTextOutlinePix = p.protoStimWidthPix/6;
     %% Define screen positions for plotting the prototype images
-
-    protocenters_pix = repmat(p.centerPix,4, 1) + p.protoDistPix*[-3,0; -1.2,0; 1.2,0; 3 ,0];    
+    smalldist = p.protoStimWidthPix/2+p.protoSpacingPix;
+    largedist = smalldist + p.protoSpacingPix + p.protoStimWidthPix;
+    protocenters_pix = repmat(p.centerPix,4,1) + [-largedist,0;-smalldist,0;smalldist,0;largedist,0];
+%     protocenters_pix = repmat(p.centerPix,4, 1) + p.protoDistPix*[-3,0; -1.2,0; 1.2,0; 3 ,0];    
    
     % define where to draw the images themselves - this is a frame to pass
     % into the drawtexture function
@@ -461,7 +465,7 @@ try
 
     %use number pad - change this for scanner 
     if scannerlaptop
-        p.keys=[KbName('b'),KbName('y'),KbName('g'),KbName('r')];
+        p.keys=[KbName('b'),KbName('y')];
     else
 %         p.keys =[KbName('1!'),KbName('2@'),KbName('3#'),KbName('4$')];
         p.keys=[KbName('u'),KbName('i')];
@@ -573,7 +577,7 @@ try
         % start checking responses as soon as stim comes up
         keepChecking = 1;
         
-        Screen('DrawTexture', w, allims(p.imlist(tt,1)).imtext,[],p.framePos);
+        Screen('DrawTexture', w, allims(tt).imtext,[],p.framePos);
         Screen('DrawDots', w, [0,0], p.fixSizePix, p.fixColor, p.centerPix, 0); 
         Screen('DrawingFinished', w);
 
@@ -787,6 +791,12 @@ try
     end 
     %% finish experiment 
        
+    
+    % get accuracy
+    trialsdone = ~isnan(t.stim_flips(:,2));
+    acc = mean(data.Response(trialsdone)==p.category(trialsdone));
+    data.Accuracy = acc;
+    
     % final fixation:
     Screen('DrawDots', w, [0,0], p.fixSizePix, p.fixColor, p.centerPix, 0); 
     Screen('DrawingFinished', w);
@@ -807,10 +817,11 @@ try
     %% get accuracy
     
     fprintf('\nCompleted block %d!\n',p.RunNumThisPart);
-
+    fprintf('Accuracy is %.2f percent\n',data.Accuracy*100);
     fprintf('Number of time out trials: %d/%d\n',sum(data.Response==0),p.nTrials);
     
     InstrText = ['Block finished!' '\n\n'...
+                sprintf('Accuracy is %.2f percent',data.Accuracy*100), '\n\n'...
                 'Please find the experimenter to start next block.'];
 
     DrawFormattedText(w, InstrText, 'center', 'center', p.white);

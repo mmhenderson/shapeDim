@@ -1,23 +1,24 @@
-% CATEGORY JUDGMENT TASK - SHAPE SPACE 
+ % CATEGORY JUDGMENT TASK - SHAPE SPACE 
 % Subject sees a sequence of images - must report the category of each
 % image, according to a two-way division. 
 % There are several divisions that can be used.
 % We'll present two prototype images to remind the subject which images are
-% which. 
+% which.   
  
-% WRITTEN FOR BEHAVIOR ROOMS (B,C,D)
-
-% parameters
+% WRITTEN FOR BEHAVIOR ROOMS AND SCANNER LAPTOP
+% change variable p.scannerlaptop to indicate which situation.
+       
+% parameters for MRI task
     % Image size 24 degrees (fills almost entire screen)
-    % Image onscreen for 1 second
+    % Image onscreen for 1 second    
     % Response period for 1 second (blank)
-    % Feedback 2 seconds
-    % ITI 2 seconds (incl blank period)
+    % ITI [1-5] seconds jittered
     
     % 48 total images presented
     
-    % total time = 2s blank start + 48*(1+1+1+2) = 242 seconds
-    % 242/60 = 4 minutes
+    % total time = 13s blank start + 48*(1+1+3) + 8s blank end 
+    %   = 261 seconds or 4:21
+    %   with TR=0.8 sec this is 327 TRs.
     
 try
     
@@ -25,14 +26,14 @@ try
     clear 
     close all hidden
        
-    scannerlaptop = 0;
-   
+    p.scannerlaptop = 0;
+
     expdir = pwd;
     filesepinds = find(expdir==filesep);
     root = expdir(1:filesepinds(end)-1);
     
     % set up paths for saving
-    if scannerlaptop || IsWindows
+    if p.scannerlaptop || IsWindows  
         % if scanner laptop or debugging, save to a subfolder here.
         datadir_local = fullfile(root, 'Data');
         datadir_remote = datadir_local;
@@ -46,40 +47,46 @@ try
     
     % make a dialog box to enter things
     prompt = {'Debug mode?','Subject Initials','Subject Number','Session (1 or 2)',...
-        'Part (1-6)', 'Run Number (1 or 2)', 'Training Run? (0 or 1)','Image Set'};
+        'Part (1-3)', 'Run Number (1-3)', 'Training Run? (0 or 1)','Image Set','Difficulty (7-13)'};
     dlgtitle = 'Enter Run Parameters';
     dims = [1 35];
-    definput = {'0','XX','99','1','1','1','0','3'};
+    definput = {'0','XX','99','1','1','1','0','3','9'};
     answer = inputdlg(prompt,dlgtitle,dims,definput);
     p.debug = str2double(answer{1});
-    p.Subject = answer{2};
-    p.SubNum = sprintf('%02d',str2double(answer{3}));
+    p.SubInit = answer{2};  
+    p.SubNum = str2double(answer{3});
+    p.SubNumStr = sprintf('%02d',str2double(answer{3}));
     p.Session = str2double(answer{4});
     p.Part = str2double(answer{5});
     p.RunNumThisPart = str2double(answer{6});
     p.Training = str2double(answer{7});
     p.ImageSet = str2double(answer{8});
-
+    p.RunDifficulty = str2double(answer{9});
+    
     % check values of these entries
     if ~ismember(p.Session,[1,2]);  error('session must be 1 or 2');  end
-    if ~ismember(p.Part,1:6); error('part must be 1-6'); end
-    if ~ismember(p.ImageSet,1:4); error('image set must be 1-4'); end
-
+    if ~ismember(p.Part,1:3); error('part must be 1-3'); end
+    if ~ismember(p.Training,[0,1]); error('training must be 0 or 1'); end
+    if ~ismember(p.ImageSet,1:4  ); error('image set must be 1-4'); end
+    if ~ismember(p.RunDifficulty,7:13); error('difficulty level must be 7-13'); end
+   
     rng('default')
     t.MySeed = sum(100*clock); 
     rng(t.MySeed);
-    
-    % where will i look for images?
-    p.imagedir=fullfile(root, sprintf('Stimuli/AmpGrid%d_full_grey/',p.ImageSet));
+     
+    % where will i look for images? 
+%     p.imagedir=fullfile(root, sprintf('Stimuli/AmpGrid%d_full_grey/',p.ImageSet));
+    p.imagedir=fullfile(root, sprintf('Stimuli/AmpGrid%d_adj_full_grey/',p.ImageSet));
     
     % am i debugging my code (usually on the admin account?) if so, don't
     % try to save remotely yet
+    
     if p.debug
         saveremote = 0;
-    else
+    else 
         saveremote = 1;
     end
-   
+    saveremote = 0; % never save remotely - running on lab computer w/o network connection 3/19/2021
     %% initialize my data file
     % save a copy of the currently running script here (in text format) so
     % we can look at it later if issues arise
@@ -96,13 +103,13 @@ try
     t.TimeStamp = datestr(now,'HHMM'); %Timestamp for saving out a uniquely named datafile (so you will never accidentally overwrite stuff)
          
     if p.Training
-        p.expName = sprintf('ShapeTask_sess%d_part%d_TRAINING',p.Session,p.Part);
+        p.expName = sprintf('MainTaskMRI_nofeedback_sess%d_part%d_TRAINING',p.Session,p.Part);
     else
-        p.expName = sprintf('ShapeTask_sess%d_part%d',p.Session,p.Part);
+        p.expName = sprintf('MainTaskMRI_nofeedback_sess%d_part%d',p.Session,p.Part);
     end
     
-    p.fnsave_local = fullfile(datadir_local, ['S', p.SubNum, '_' p.expName '_' t.TheDate '.mat']);
-    p.fnsave_remote = fullfile(datadir_remote, ['S', p.SubNum, '_' p.expName '_' t.TheDate '.mat']);
+    p.fnsave_local = fullfile(datadir_local, ['S', p.SubNumStr, '_' p.expName '_' t.TheDate '.mat']);
+    p.fnsave_remote = fullfile(datadir_remote, ['S', p.SubNumStr, '_' p.expName '_' t.TheDate '.mat']);
     
     if exist(p.fnsave_local,'file')
         load(p.fnsave_local);
@@ -116,27 +123,28 @@ try
     p.rndseed = round(sum(100*clock));
     rng(p.rndseed);
     
-    if p.debug
-        % debug mode - do a few trials then quit
-        p.nTrials = 8 ;
-    elseif p.Training
-        p.nTrials = 24;
-    else
+    if p.debug || p.Training
+        % very small ## trials here
+        p.nTrials = 5;
+        p.nTrials_variable = 0;
+        p.nTrials_main = 5;
+    else   
         p.nTrials = 48;
+        p.nTrials_variable = 16;    % variable are the trials whose difficulty is set by experimenter
+        p.nTrials_main = 32;    % main are trials from the fixed 16-pt grid.
     end
- 
-    p.nIms = p.nTrials;
-   
+
     %% figure out what to do during this block.
     
     % list the orders in which things will happen across entire experiment
     % [nParts x nSess]
-    bound_list = [1,2;1,2;2,1;2,1;3,3;3,3]; % which category boundary?
-    map_list = [1,2;2,1;1,2;2,1;1,2;2,1];   % which response mapping?
-    position_list = [1,2;1,2;1,2;1,2;1,2;1,2];  % which positions will we show prototypes on the screen?
-    
-    if ~mod(p.SubNum,2)        
-        % even num subject, start with second sess (otherwise start with
+    bound_list = [1,2;2,1;3,3] ;    % which boundary is active? this defines which categorization dim they're using
+    map_list = [1,2;1,2;1,2];   % which response mapping? e.g. which finger for which category?
+    position_list = [1,2;1,2;1,2];  % this defines which positions the prototype stims are drawn on the start screen. Not super important, left over from older vers of the code.
+   
+%     if ~mod(p.SubNum,2)  
+    if mod(p.SubNum,2)
+        % odd num subject, start with second sess (otherwise start with
         % the first session)
         bound_list = bound_list(:,[2,1]);
         map_list = map_list(:,[2,1]);
@@ -148,22 +156,34 @@ try
     p.which_mapping = map_list(p.Part, p.Session);
     p.which_pos = position_list(p.Part, p.Session);
     
-   %% set up the image grid 
+    %% set up the main 16 pts grid 
    
-   % first I'm defining all possible images that we can use in this task.
-    start = 0.2;    % min value along each axis
-    stop = 4.8; % max value along each axis  
+    % fixed number of images in the grid
+    p.nIms_main = 16;
+    % Define a 4x4 grid w even spacing
+    start = 0;    % min value along each axis
+    stop = 5; % max value along each axis  
+    nsteps_main = 4;    % how many steps along each axis?
+    start_grid = 0.1;
+    stop_grid = 4.9;
+    main_pts = round(linspace(start_grid,stop_grid, nsteps_main),1);
+    
+    [gridx,gridy] = meshgrid(main_pts,main_pts);
+    main_grid_points = [gridx(:),gridy(:)];
+    p.main_grid_points = main_grid_points;
+    
+    %% set up the full image grid 
+   
+    % first I'm defining all possible images that we can use in this task. 
     step = 0.1;
     center = (stop-start)./2+start;
       
-    all_pts = start:step:stop;  
+    all_pts = round(start:step:stop,1) ;  
     [gridx,gridy] = meshgrid(all_pts,all_pts);
     all_grid_points = [gridx(:),gridy(:)];
     
     % now taking out images at exactly the prototype locations so that we
     % never use these during task
-    nsteps_main = 4;
-    main_pts = round(linspace(start,stop, nsteps_main),1);
     proto_pts = [round(mean(main_pts(1:2)),1), round(mean(main_pts(3:4)),1)];
     proto_coords = [proto_pts(2), proto_pts(2); proto_pts(1), proto_pts(2); proto_pts(1), proto_pts(1); proto_pts(2), proto_pts(1)];
     proto_inds = find(ismember(all_grid_points, proto_coords, 'rows'));
@@ -175,7 +195,10 @@ try
     bound_inds = find(any(all_grid_points==center,2));
     all_grid_points(bound_inds,:) = [];
   
-    % now define which quadrant each image lies in
+    % now define which quadrant each image lies in. note that this
+    % "quadrant" property is fixed no matter what the task is, the
+    % "category" is a separate property that will change depending on task.
+    % that gets defined later.
     all_quadrant = zeros(size(all_grid_points,1),1);
     all_quadrant(all_grid_points(:,1)>center & all_grid_points(:,2)>center) = 1;
     all_quadrant(all_grid_points(:,1)<center & all_grid_points(:,2)>center) = 2;
@@ -183,7 +206,8 @@ try
     all_quadrant(all_grid_points(:,1)>center & all_grid_points(:,2)<center) = 4;
     
     % Next, for each point in the full grid, define the difficulty level 
-    % based on distance from the boundary
+    % based on distance from the boundary. This depends on the active task
+    % because it's relative to the active boundary.
     if p.which_bound<3
         % just considering distance from the binary bound
         dist_from_bound = round(abs(all_grid_points(:,p.which_bound)-center),1);
@@ -191,7 +215,8 @@ try
         % considering distance from any boundary
         dist_from_bound = round(min(abs((all_grid_points-repmat(center, size(all_grid_points,1),2))),[],2),1);
     end
-    % bin these values into 13 "levels"
+    
+    % bin these values into 13 "difficulty levels"
     [undist, ~ , dist_groups] = unique(round(dist_from_bound,1)); 
     
     % define the start of each bin
@@ -207,46 +232,79 @@ try
     end  
 
     nperbin = sum(repmat(dist_groups_binned, 1, size(bin_edges,2))==repmat(1:size(bin_edges,2),size(dist_groups_binned,1),1),1);
-    assert(all(nperbin>=p.nIms/4));
+    assert(all(nperbin>=p.nTrials_variable));
     
-    %% Now choose the images that we want to show on this block. Sampling from multiple difficulty levels.
-    if p.Training
-        difficulty_to_sample = 6:9;
-    else
-        difficulty_to_sample = 6:13;
-    end
-    p.difficulty_to_sample = difficulty_to_sample;
-    assert(~mod(p.nIms, length(difficulty_to_sample)));
-    nPerDiff = p.nIms/length(difficulty_to_sample);
-    myinds = [];
-    for dd=1:length(difficulty_to_sample)
+    %% Now choose the images that we want to show on this block. 
 
-        thisbin = find(dist_groups_binned==difficulty_to_sample(dd));    
-        myinds = [myinds; datasample(thisbin, nPerDiff, 'replace',false)];
-        
+    % first, the 16 main grid points
+    main_grid_inds = zeros(p.nIms_main,1);
+    for pp=1:size(p.main_grid_points,1)
+       main_grid_inds(pp) = find(ismember(all_grid_points, p.main_grid_points(pp,:),'rows'));    
     end
-    p.points = all_grid_points(myinds,:);
-    p.difficulty = dist_from_bound(myinds);
-    p.quadrant = all_quadrant(myinds);
-     
+    main_grid_dist = dist_groups_binned(main_grid_inds);
+    
+    % next the variable trials
+    % based on the difficulty level inputted above, decide what shape space
+    % positions to sample.
+    difficulty_to_sample = [p.RunDifficulty];
+    p.difficulty_to_sample = difficulty_to_sample;
+    
+    assert(~mod(p.nTrials_variable, length(difficulty_to_sample)));
+    assert(~mod(p.nTrials_variable, 4));
+    nEach = p.nTrials_variable/length(difficulty_to_sample)/4;
+    var_inds = [];
+    for dd=1:length(difficulty_to_sample)
+        % looping over quadrants to keep the responses balanced
+        for qq=1:4           
+            % from each quadrant and each difficulty level that we want to
+            % sample, grab a random subset of image indices.
+            thisbin = find(dist_groups_binned==difficulty_to_sample(dd) & all_quadrant==qq);    
+            var_inds = [var_inds; datasample(thisbin, nEach, 'replace',false)];
+        end
+    end
+  
     % check this math
+    points_check = all_grid_points(var_inds,:); 
     if p.which_bound<3
-        dist_from_bound = round(abs(p.points(:,p.which_bound)-center),1);
+        dist_from_bound_check = round(abs(points_check(:,p.which_bound)-center),1);
     else
-        dist_from_bound = round(min(abs((p.points-repmat(center, size(p.points,1),2))),[],2),1);
+        dist_from_bound_check = round(min(abs((points_check-repmat(center, size(points_check,1),2))),[],2),1);
     end
-    assert(all(dist_from_bound==repelem(bin_edges(difficulty_to_sample)',nPerDiff))); 
+    assert(all(dist_from_bound_check==repmat(bin_edges(difficulty_to_sample)',nEach*4,1))); 
+        
+    % now combine the main grid images and the variable diff images
+    if p.Training==1 || p.debug==1
+        myinds = [datasample(main_grid_inds,p.nTrials_main)];
+    else
+        % for full version of task, using each of main images 2x
+        myinds = [main_grid_inds; main_grid_inds; var_inds];  
+    end
+    is_main_grid = [ones(p.nTrials_main,1);zeros(p.nTrials_variable,1)];
+    assert(numel(myinds)==p.nTrials);
+    assert(numel(is_main_grid)==p.nTrials);
+    
+    % index into the big lists to get all the shapes we want to use and
+    % their properties
+    p.points = all_grid_points(myinds,:);
+    p.dist_from_bound = dist_from_bound(myinds);
+    p.trial_difficulty = dist_groups_binned(myinds);
+    p.quadrant = all_quadrant(myinds);
+    p.is_main_grid = is_main_grid;
         
     %% Make a randomized image sequence    
-    p.imlist = (1:p.nIms)';
-    p.imlist = p.imlist(randperm(length(p.imlist)));
+    trial_order = (1:p.nTrials)';
+    trial_order = trial_order(randperm(length(trial_order)));
     
     % sort everything the same way
-    p.points = p.points(p.imlist,:);
-    p.difficulty= p.difficulty(p.imlist);
-    p.quadrant = p.quadrant(p.imlist);
-    
-    % which categorization scheme are we using? each row is a group.
+    p.points = p.points(trial_order,:);
+    p.dist_from_bound= p.dist_from_bound(trial_order);
+    p.trial_difficulty = p.trial_difficulty(trial_order);
+    p.quadrant = p.quadrant(trial_order);
+    p.is_main_grid = p.is_main_grid(trial_order);
+      
+    %% Define the categories/response mapping for this run
+    % which categorization scheme are we using? each row defines the two
+    % "quadrants" that are grouped into a common "category"
     if p.which_bound == 1
         cat_groups = [1, 4; 2, 3];
     elseif p.which_bound == 2
@@ -256,21 +314,30 @@ try
     end        
     
     if p.which_mapping == 2
-        % flip the rows (flip which group is shown on which side of
-        % fixation)
+        % flip the rows, will flip which finger corresponds to which
+        % category. At start of task, the prototypes for the categories
+        % will always be shown on L/R side of fixation, so changing the
+        % mapping will also switch which side of fixation the categories
+        % are each shown on.
         cat_groups = cat_groups([2,1],:);
     end
     
     if p.which_pos == 2
         % flip the spatial positions in which the prototypes are shown
-        % (within their groups)
+        % (within their groups). Note that this is NOT counter-balanced
+        % w/r/t which_mapping; they always have the same value in this vers
+        % of the code. Left over from older vers of this script, not super
+        % important. 
         cat_groups = cat_groups(:,[2,1]);
     end
-        
+    
+    % define positions to draw prototypes on start screen.
     p.proto_order = [cat_groups(1,:), cat_groups(2,:)];
     
+    % define category for each trial. 
     % quadrant is a fixed property of each image
     % category depends on the rule in place (which finger/side)
+    p.category = zeros(size(p.quadrant));
     p.category(ismember(p.quadrant, cat_groups(1,:)))= 1;
     p.category(ismember(p.quadrant, cat_groups(2,:)))= 2;
     
@@ -292,9 +359,9 @@ try
 %     line(get(gca,'XLim'), [center,center], 'Color','k');
 %     
 %     set(gcf,'Color','w');
-%     title(sprintf('Shape locations used for this block: Boundary %d, Map %d\n',p.which_bound, p.which_mapping));
-    
-   
+%     title(sprintf('Shape locations used for this block: Boundary %d, Map %d, Difficulty %d\n',p.which_bound, p.which_mapping, p.RunDifficulty));
+%     
+%    
     %% set up my screen 
     
     InitializeMatlabOpenGL;  
@@ -333,7 +400,7 @@ try
         p.fps=1/p.ifi;
     end
 
-    if scannerlaptop
+    if p.scannerlaptop
         p.refreshRate = 60;
         % INNER BORE screen
         p.vDistCM = 47;
@@ -351,7 +418,7 @@ try
             p.refreshRate = 85;
         end
         % Behavior rooms (should all be identical)
-        p.vDistCM = 49;
+        p.vDistCM = 46;
         p.screenHeightCM = 29;  
     end
     p.VisAngle = (2*atan2(p.screenHeightCM/2, p.vDistCM))*(180/pi); % visual angle of the whole screen
@@ -380,27 +447,28 @@ try
 %     p.fixColor = [0,0,0];
     p.stimHeightDeg = 24;   
     % note that this is the size of the square image that is drawn, including its grey background. 
-    % The shape itself is about 2/3 of that size. So, the background is
+    % The shape itself is about 2/3 of that size. So, the backgr ound is
     % drawn in a frame slightly bigger than the screen, but all the shape pixels are
     % within the bounds of the screen.
 
-    p.protoStimHeightDeg = 10;
+    p.protoStimHeightDeg = 9;   % how big is each prototype image?    
+%     p.protoSpacingDeg = 1;  % how far apart are the four prototypes drawn?
+    p.protoSpacingDeg = 0.1; 
     p.outlineProp = 0.9; % for the colored square outlines, how big are they relative to the image square size?
-    p.protoDistDeg = 4.8; % how far is center of prototype drawn from the center?
     p.feedbackTextHeightDeg = 8;
     p.rectColor = [0.1,0.8,0.1]*255;
     p.rectWidthDeg = 0.1;
     % convert from degrees to pixel units
-    p = deg2pix(p);
+    p = deg2pix(p);  
     p.fixSizePix = ceil(p.fixSizePix);
-    %% Load the images
-
-    for ii=1:p.nIms
+    %% Load the images 
+      
+    for ii=1:p.nTrials
         
         imfn = fullfile(p.imagedir, sprintf('Shape_%.2f_%.2f.png', p.points(ii,1),p.points(ii,2)));
         if exist(imfn,'file')
             im=imread(imfn);
-        else
+        else  
             error('image file %s not found!',imfn)
         end        
         
@@ -436,8 +504,10 @@ try
     p.protoStimWidthPix = p.protoStimHeightPix*size(im,2)/size(im,1);
     p.boundTextOutlinePix = p.protoStimWidthPix/6;
     %% Define screen positions for plotting the prototype images
-
-    protocenters_pix = repmat(p.centerPix,4, 1) + p.protoDistPix*[-3,0; -1.2,0; 1.2,0; 3 ,0];    
+    smalldist = p.protoStimWidthPix/2+p.protoSpacingPix;
+    largedist = smalldist + p.protoSpacingPix + p.protoStimWidthPix;
+    protocenters_pix = repmat(p.centerPix,4,1) + [-largedist,0;-smalldist,0;smalldist,0;largedist,0];
+%     protocenters_pix = repmat(p.centerPix,4, 1) + p.protoDistPix*[-3,0; -1.2,0; 1.2,0; 3 ,0];    
    
     % define where to draw the images themselves - this is a frame to pass
     % into the drawtexture function
@@ -460,8 +530,8 @@ try
     KbName('UnifyKeyNames')
 
     %use number pad - change this for scanner 
-    if scannerlaptop
-        p.keys=[KbName('b'),KbName('y'),KbName('g'),KbName('r')];
+    if p.scannerlaptop
+        p.keys=[KbName('b'),KbName('y')];
     else
 %         p.keys =[KbName('1!'),KbName('2@'),KbName('3#'),KbName('4$')];
         p.keys=[KbName('u'),KbName('i')];
@@ -495,32 +565,43 @@ try
     %% timing information
     
     t.StimTimeTotal= 1.0;     
-    % how long do they have to respond from image onset?
-    t.RespTimeRange = 2;
-    t.RespTimeBlank = t.RespTimeRange - t.StimTimeTotal;
     t.ShowFeedbackTime = 1;
+%     
     if p.Training
-        t.MaxRespTime = 10;
+        t.MaxRespTime = 10;  
+    else
+        % how long do they have to respond from image onset?
+        t.RespTimeRange = 2;
+        t.RespTimeBlank = t.RespTimeRange - t.StimTimeTotal;
     end
     
-    t.ITIrange = [2,2];
+    if p.scannerlaptop
+        % actual timing for scanner expt - long delay at start,
+        % longer/jittered ITIs
+        t.StartFixation = 13;
+        t.EndFixation = 8;
+        t.ITIrange = [1, 5];
+    else
+        % for behav room, no need to have these longer delays so whole expt
+        % will be shorter.
+        t.StartFixation = 2;
+        t.EndFixation = 0;
+        t.ITIrange = [2, 2];
+    end
+    
     itis = linspace(t.ITIrange(1),t.ITIrange(2),p.nTrials);
     t.ITI = itis(randperm(length(itis)))';
    
-    if scannerlaptop
-        t.StartFixation = 13;
-        t.EndFixation = 8;
-    else
-        t.StartFixation = 2;
-        t.EndFixation = 0;
-    end
-    
     t.stim_flips = nan(p.nTrials,2);  
      %% START EXPERIMENT
     % Draw an instruction screen, wait for space press
     FlushEvents('keyDown');
-    Screen(w,'TextFont','Helvetica');
-
+    if p.scannerlaptop==1
+        Screen(w,'TextFont','Helvetica');
+    else
+        Screen(w,'TextFont','-bitstream-courier 10 pitch-medium-i-normal--0-0-0-0-m-0-adobe-standard')
+    end
+ 
     % draw the prototype images
     for bb=1:4
         Screen('DrawTexture', w, proto_ims(p.proto_order(bb)).imtext,[],p.protoFramePos(bb,:));        
@@ -529,16 +610,16 @@ try
   
     Screen('DrawDots', w, [0,0], p.fixSizePix, p.fixColor, p.centerPix, 0); 
     Screen('DrawingFinished', w);
-    Screen('Flip', w);
+    Screen('Flip', w);               
 
     resp=0;
     % wait for a space bar press to start
     while resp==0
         [resp, timeStamp] = checkForResp([p.start,p.space],p.escape);
-        if resp==-1; escaperesponse(OriginalCLUT); end 
+        if resp==-1; escaperesponse(OriginalCLUT); end       
 %         [keyIsDown, secs, keyCode] = KbCheck([-1]);       
     end
-    t.StartTime = GetSecs;
+    t.StartTime = GetSecs; 
     
     KbReleaseWait();
     
@@ -573,7 +654,7 @@ try
         % start checking responses as soon as stim comes up
         keepChecking = 1;
         
-        Screen('DrawTexture', w, allims(p.imlist(tt,1)).imtext,[],p.framePos);
+        Screen('DrawTexture', w, allims(tt).imtext,[],p.framePos);
         Screen('DrawDots', w, [0,0], p.fixSizePix, p.fixColor, p.centerPix, 0); 
         Screen('DrawingFinished', w);
 
@@ -601,10 +682,11 @@ try
 
         TimeUpdate = TimeUpdate + t.StimTimeTotal; %Update Matlab on what time it is.
        
-        %% extra response screen to show prototypes if training block.
+        % next part depends on whether training or real block...
         if p.Training
-           
-            % draw the prototype images
+            
+            %% draw the prototype images on screen
+            % to remind subject of response mapping.
             for bb=1:4
                 Screen('DrawTexture', w, proto_ims(p.proto_order(bb)).imtext,[],p.protoFramePos(bb,:));        
 %                 DrawFormattedText(w, sprintf('%d',bb), p.boundTextPos{oo}(bb,1)+p.textAdjPix(1),p.boundTextPos{oo}(bb,2)+p.textAdjPix(2),p.white);
@@ -617,6 +699,8 @@ try
 
             Screen('Flip', w);
             
+            % will give a maximum time window to respond, if they respond
+            % before then they move onto next trial 
             TimePassed = (GetSecs-TimeUpdate);
             while keepChecking && TimePassed<t.MaxRespTime
                 TimePassed = (GetSecs-TimeUpdate);
@@ -632,6 +716,8 @@ try
                     keepChecking=0;
                 end
             end
+            % if they still haven't responded - this is when we would mark
+            % it as a missed response.
             if keepChecking
                 keepChecking = 0;
                 data.Response(tt) = 0;
@@ -639,9 +725,9 @@ try
             GlobalTimer = GlobalTimer + TimePassed;
             TimeUpdate = TimeUpdate + TimePassed; %Update Matlab on what time it is.
             
-            %% Feedback (training only)
+            %% Feedback 
                        
-           % draw the quadrant prototype images
+            % draw the quadrant prototype images
             for bb=1:4
                 Screen('DrawTexture', w, proto_ims(p.proto_order(bb)).imtext,[],p.protoFramePos(bb,:));        
 %                 DrawFormattedText(w, sprintf('%d',bb), p.boundTextPos{oo}(bb,1)+p.textAdjPix(1),p.boundTextPos{oo}(bb,2)+p.textAdjPix(2),p.white);
@@ -681,92 +767,48 @@ try
             
             TimeUpdate = TimeUpdate + t.ShowFeedbackTime; %Update Matlab on what time it is.
                     
-        end
-        
-        %% back to blank screen - keep checking for 1 second
+        else
+            %% FULL TASK - no reminders of prototypes
+            % just blank screen, but keep checking responses
 
-        Screen('DrawDots', w, [0,0], p.fixSizePix, p.fixColor, p.centerPix, 0); 
-        Screen('DrawingFinished', w);                     
-        Screen('Flip', w);
-        if ~p.Training
-            t.stim_flips(tt,2)= GetSecs;
-        end
-        
-        %TIMING!:
-        GlobalTimer = GlobalTimer + t.RespTimeBlank;
-        TimePassed = (GetSecs-TimeUpdate); 
-        while TimePassed < t.RespTimeBlank
-            TimePassed = (GetSecs-TimeUpdate); 
-            [resp, timeStamp] = checkForResp(p.keys,p.escape);
-            if resp==-1; escaperesponse(OriginalCLUT); end;            
-            if keepChecking && resp && find(p.keys==resp)
-                
-                %they responded to this stim with 1-4
-                data.Response(tt)=find(p.keys==resp);
-                t.RespTimeFromOnset(tt)= timeStamp - t.stim_flips(tt,1);
-                % now we have one response - stop checking! they can't
-                % change it now even if they want to
-                keepChecking=0;
-                
-            end
-            
-           
-            
-        end
-        % if they still haven't responded - this is when we would mark
-        % it as a missed response.
-        if keepChecking 
-             keepChecking=0;
-             data.Response(tt) = 0;
-        end
-        TimeUpdate = TimeUpdate + t.RespTimeBlank; %Update Matlab on what time it is.
-           
-        %% Now feedback
-        
-        if ~p.Training
-            
-                        
-           % draw the quadrant prototype images
-%             for bb=1:2
-%                 Screen('DrawTexture', w, proto_ims(bb).imtext,[],p.protoFramePos(bb,:));        
-% %                 DrawFormattedText(w, sprintf('%d',bb), p.boundTextPos{oo}(bb,1)+p.textAdjPix(1),p.boundTextPos{oo}(bb,2)+p.textAdjPix(2),p.white);
-%             end
-                       
-            if data.Response(tt)~=0
-                 % outline the correct answer
-%                 Screen('FrameRect', w, p.fixColor, p.catOutlinePos(data.Response(tt),:),p.rectWidthPix);
-             
-                if data.Response(tt)==p.category(tt)
-                    showtext = 'Correct!\n\n';
-                else
-                    showtext = 'Incorrect.\n\n';
-                end
-            else
-               showtext = 'Time out!\n\n'; 
-            end
-            
-            % outline the correct answer
-%             Screen('FrameRect', w, p.rectColor, p.catOutlinePos(p.category(tt),:),p.rectWidthPix);
-                          
-            DrawFormattedText(w, showtext, 'center', p.centerPix(2)-p.feedbackTextHeightPix/4, p.white);
             Screen('DrawDots', w, [0,0], p.fixSizePix, p.fixColor, p.centerPix, 0); 
-            Screen('DrawingFinished', w);
-            Screen('Flip', w);            
-            
-            GlobalTimer = GlobalTimer + t.ShowFeedbackTime;
-            
-            TimePassed = (GetSecs-TimeUpdate);
-            while TimePassed<t.ShowFeedbackTime
-                TimePassed = (GetSecs-TimeUpdate);
-                %check for escape responses 
+            Screen('DrawingFinished', w);                     
+            Screen('Flip', w);
+           
+            t.stim_flips(tt,2)= GetSecs;
+
+            %TIMING!:
+            GlobalTimer = GlobalTimer + t.RespTimeBlank;
+            TimePassed = (GetSecs-TimeUpdate); 
+            while TimePassed < t.RespTimeBlank
+                TimePassed = (GetSecs-TimeUpdate); 
                 [resp, timeStamp] = checkForResp(p.keys,p.escape);
-                if resp==-1; escaperesponse(OriginalCLUT); end;
+                if resp==-1; escaperesponse(OriginalCLUT); end;            
+                if keepChecking && resp && find(p.keys==resp)
+
+                    %they responded to this stim with 1-4
+                    data.Response(tt)=find(p.keys==resp);
+                    t.RespTimeFromOnset(tt)= timeStamp - t.stim_flips(tt,1);
+                    % now we have one response - stop checking! they can't
+                    % change it now even if they want to
+                    keepChecking=0;
+
+                end
+
             end
+            % if they still haven't responded - this is when we would mark
+            % it as a missed response.
+            if keepChecking 
+                 keepChecking=0;
+                 data.Response(tt) = 0;
+            end
+            TimeUpdate = TimeUpdate + t.RespTimeBlank; %Update Matlab on what time it is.
+           
+            %% NO FEEDBACK he re
             
-            TimeUpdate = TimeUpdate + t.ShowFeedbackTime; %Update Matlab on what time it is.
-                    
         end
         
+        % now back to same for training/main...
         %% ITI 
 
         Screen('DrawDots', w, [0,0], p.fixSizePix, p.fixColor, p.centerPix, 0); 
@@ -785,8 +827,19 @@ try
         TimeUpdate = TimeUpdate + t.ITI(tt,1); %Update Matlab on what time it is.
            
     end 
+    
     %% finish experiment 
        
+    % get accuracy
+    trialsdone = ~isnan(t.stim_flips(:,2));
+    acc = mean(data.Response(trialsdone)==p.category(trialsdone));
+    data.Accuracy = acc;
+    
+    data.MainGridAccuracy = mean(data.Response(trialsdone & p.is_main_grid==1)==...
+        p.category(trialsdone & p.is_main_grid==1));
+    data.VariableAccuracy = mean(data.Response(trialsdone & p.is_main_grid==0)==...
+        p.category(trialsdone & p.is_main_grid==0));
+    
     % final fixation:
     Screen('DrawDots', w, [0,0], p.fixSizePix, p.fixColor, p.centerPix, 0); 
     Screen('DrawingFinished', w);
@@ -807,11 +860,14 @@ try
     %% get accuracy
     
     fprintf('\nCompleted block %d!\n',p.RunNumThisPart);
-
+    fprintf('Accuracy is %.2f percent\n',data.Accuracy*100);
+    fprintf('Easier trials: %.2f percent\n',data.MainGridAccuracy*100);
+    fprintf('Harder trials (diff=%d): %.2f percent\n',p.RunDifficulty,data.VariableAccuracy*100);
     fprintf('Number of time out trials: %d/%d\n',sum(data.Response==0),p.nTrials);
     
     InstrText = ['Block finished!' '\n\n'...
-                'Please find the experimenter to start next block.'];
+                sprintf('Accuracy is %.2f percent',data.Accuracy*100)];
+                
 
     DrawFormattedText(w, InstrText, 'center', 'center', p.white);
     % put up a message to wait
