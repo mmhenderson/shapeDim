@@ -10,7 +10,7 @@ root = currdir(1:filesepinds(end-ndirsup+1));
 addpath('/usr/local/serenceslab/maggie/mFiles/Classifiers/');
 
 % first list ALL subjects 
-sublist = [1:3];
+sublist = [1:4];
 
 % now list any that I want to remove
 sub2remove = [];
