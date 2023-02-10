@@ -11,9 +11,9 @@
     % Each trial is 7 seconds long, ITI jittered 2-8 seconds
     % 20 trials
     % total length:
-        % 20*7 + 20*5 + 13+8 = 261 seconds
-        % 327 TRs
-        % 4:21 min:sec
+        % 20*7 + 20*5 + 13+9 = 262 seconds
+        % 328 TRs
+        % 4:22 min:sec
     
 try
 %     
@@ -21,13 +21,23 @@ try
     clear 
     close all hidden
        
-    scannerlaptop = 1;
+    p.scannerlaptop = 0;
 %     saveremote = 0;
     
     expdir = pwd;
     filesepinds = find(expdir==filesep);
     root = expdir(1:filesepinds(end)-1);
-    datadir_local = fullfile(root, 'Data');
+
+    % set up paths for saving
+    if p.scannerlaptop || IsWindows  
+        % if scanner laptop or debugging, save to a subfolder here.
+        datadir_local = fullfile(root, 'Data');
+%         datadir_remote = datadir_local;
+    else
+        % linux, behavior rooms - save to a different folder.
+        datadir_local = '/home/pclexp/Documents/Maggie/shapeDim/Data/';
+%         datadir_remote = '/mnt/pclexp/Maggie/shapeDim/Data/';
+    end
 
     %% Collect information about the subject, the date, etc.
        
@@ -46,17 +56,19 @@ try
     p.ImageSet = str2double(answer{6});
 
     % check values of these entries
-    if DimBy<0 || DimBy>1; error('Contrast decrement must be between 0 and 1'); end
-    if ~ismember(p.ImageSet,1:4); error('image set must be 1-4'); end
+    if DimBy<0 || DimBy>1
+        error('Contrast decrement must be between 0 and 1'); end
+    if ~ismember(p.ImageSet,[3]); error('image set must be 3'); end
 
     rng('default')
     t.MySeed = sum(100*clock); 
     rng(t.MySeed);
 
     p.contrastDimmed = 1-DimBy; 
-   
+    
     p.expName = 'SilhouetteLocalizer';
-    p.ImageDir = fullfile(root,'Stimuli',sprintf('AmpGrid%d_grey',p.ImageSet));
+%     p.imagedir = fullfile(root,'Stimuli',sprintf('AmpGrid%d_grey',p.ImageSet));
+    p.imagedir=fullfile(root, sprintf('Stimuli/AmpGrid%d_adj_full_grey/',p.ImageSet));
     
     %% initialize my data file
 
@@ -93,8 +105,10 @@ try
     PsychJavaTrouble;
         
     % this is about middle gray
+    % contrast (black/white luminances) are defined relative to this
+    % background luminance
     p.backColor = 127;  
-    
+
     p.windowed = 0;
     s=max(Screen('Screens'));
     p.black = BlackIndex(s);
@@ -122,14 +136,14 @@ try
         p.fps=1/p.ifi;
     end
 
-    if scannerlaptop
+    if p.scannerlaptop
         p.refreshRate = 60;
         % INNER BORE screen
         p.vDistCM = 47;
-        p.screenHeightCM = 18;
+        p.screenHeightCM = 16;
 %         % STAND UP SCREEN
 %         p.screenHeightCM = 90; % in cm
-%         p.vDistCM = 370; % in cm
+%         p.vDistCM = 370; % in  cm
     else
         
         if IsWindows
@@ -140,7 +154,7 @@ try
             p.refreshRate = 85;
         end
         % Behavior rooms (should all be identical)
-        p.vDistCM = 49;
+        p.vDistCM = 46;
         p.screenHeightCM = 29;  
     end
     p.VisAngle = (2*atan2(p.screenHeightCM/2, p.vDistCM))*(180/pi); % visual angle of the whole screen
@@ -169,7 +183,7 @@ try
     p.apertureSizeDeg = 0.8 ;
     p.fixColor = [0.8,0.8,0.8]*255;
     p.checkPeriodDeg = 2;
-%     p.stimHeightDeg = 14;
+%      Deg = 14;
     p.stimHeightDeg = 24;   
     % note that this is the size of the square image that is drawn, including its grey background. 
     % The shape itself is about 2/3 of that size. So, the background is
@@ -194,9 +208,9 @@ try
     itis = linspace(t.ITIrange(1),t.ITIrange(2),p.nTrials);
     t.ITI = itis(randperm(length(itis)))';
    
-    if scannerlaptop
+    if p.scannerlaptop
         t.StartFixation = 13;
-        t.EndFixation = 8;
+        t.EndFixation = 9 ;
     else
         t.StartFixation = 2;
         t.EndFixation = 0;
@@ -207,19 +221,33 @@ try
     p.eventFreq = 0.10; 
     t.nCyclesPerTrial = t.FlickerRateHz*t.StimTimeTotal;
     
-    % this is the number of fram es that have to elapse before another event
+    % this is the number of frames that have to elapse before another event
     % can occur (this number/2 is the number of cycles that have to elapse)
     t.MinFramesBetweenEvts = 8; 
     t.MinCyclesBetweenEvts = t.MinFramesBetweenEvts/2;
-    t.MaxRespTime = t.MinFramesBetweenEvts*t.FrameDur - 0.01;   % make this a little bit shorter to ensure we get all the misses
+    % responses also have to happen within this relatively short window
+    % (i.e can't happen after another event might have occured)
+    % make this a little bit shorter to ensure we get all the misses
+    t.MaxRespTime = t.MinFramesBetweenEvts*t.FrameDur - 0.01;  
     
-    % onset of each frame (just to check my timing)
+    % onset of the first frame of each cycle (just to check my timing)
     t.stim_flips = nan(p.nTrials,t.nCyclesPerTrial);  
     
     %% Create my stimuli
 
+    FlushEvents('keyDown');
+    Screen(w,'TextFont','Helvetica');
+    
+    InstrText = sprintf('Loading/making stimuli. This is slow, please wait...\n\n\n\n');
+    DrawFormattedText(w, InstrText, 'center', 'center', p.fixColor);
+  
+    Screen('DrawDots', w, [0,0], p.apertureSizePix, p.backColor, p.centerPix, 1);
+    Screen('DrawDots', w, [0,0], p.fixSizePix, p.fixColor, p.centerPix, 0); 
+    Screen('DrawingFinished', w);
+    Screen('Flip', w);
+    
     % load the silhouette mask
-    imfn = fullfile(p.ImageDir, 'Silhouette_any.png');
+    imfn = fullfile(p.imagedir, 'Silhouette_any.png');
     if exist(imfn,'file')
         im=imread(imfn);
     else
@@ -237,14 +265,16 @@ try
     
     all_frames = [];
     
-    % how many cycles per pixel?
+    % how many cycles per pixel? Spatial frequency
     freq_cycles_per_pix = 1./p.checkPeriodPix;
     % how many cycles in 2pi pixels? This is the frequency of the sine
     % wave we want to draw.
     freq_cycles_per_2pi = 2*pi*freq_cycles_per_pix;
     
-   
+    % looping over trials and making texture array 
     for tt=1:p.nTrials
+        % looping over cycles within each trial
+        % keep track of which cycle the last dimming evt occured at
         last_dim = 1-t.MinCyclesBetweenEvts;
         for cc=1:t.nCyclesPerTrial
               
@@ -287,7 +317,7 @@ try
     KbName('UnifyKeyNames')
 
     %use number pad - change this for scanner 
-    if scannerlaptop
+    if p.scannerlaptop
 %         p.keys=[KbName('b'),KbName('y'),KbName('g'),KbName('r')];
         p.keys=[KbName('b')];
     else
@@ -375,7 +405,7 @@ try
     keepChecking = 0;
     last_evt = nan;
 
-    % make sure that we don't doule-count any button presses
+    % make sure that we don't double-count any button presses
     currently_pressing = 0;
 
     for tt=1:p.nTrials
@@ -439,7 +469,7 @@ try
                         % false alarm
                         data.RespTimeFromOnset(tt,fc) = nan;
                         data.RespGood(tt,fc) = 0;
-                         data.FACount = data.FACount + 1;
+                        data.FACount = data.FACount + 1;
                     end
                    
                 elseif currently_pressing && resp==0
@@ -689,6 +719,7 @@ try
     
 catch err%If an error occurred in the "try" block, this code is executed
    
+    sca
     if exist('OriginalCLUT','var') && ~isempty(OriginalCLUT)
         if exist('ScreenNumber','var')
              Screen('LoadCLUT', ScreenNumber, OriginalCLUT);
@@ -702,7 +733,7 @@ catch err%If an error occurred in the "try" block, this code is executed
         ShowHideWinTaskbarMex;     
     end
     ListenChar(1)
-    rethrow(err)
+     rethrow(err)
 %     if exist('ThrowErrorDB','file') ~= 0 %If ThrowErrorDB exists, use it
 %         ThrowErrorDB; %Display last error (in a pretty way)
 %     else
