@@ -62,9 +62,9 @@ def load_samplefile_h5py(sample_fn):
                         a = np.array(f[ref]).astype(int)
                         if len(np.shape(a))==2:
                             all_vox_list += [a]
-                        else:
-                            # skip any that are wrong shape, empty
-                            print('missing voxel_inds for %s %s'%(ROI_names[rr], hemis[hh]))
+                        # else:
+                        #     # skip any that are wrong shape, empty
+                        #     print('missing voxel_inds for %s %s'%(ROI_names[rr], hemis[hh]))
 
     # double checking that the list of voxels we pulled out is correct and lines up with all_vox_concat
     # print([av.shape for av in all_vox_list])
@@ -89,8 +89,12 @@ def load_mat_behav_data(filename, varname='TheData'):
     """
     
     TheData = spio.loadmat(filename, squeeze_me=True, struct_as_record=False)[varname]
-    TheData = [_todict(d) for d in TheData]
-    
+    try:
+        TheData = [_todict(d) for d in TheData]
+    except:
+        # the above will throw error if only one run
+        TheData = [_todict(TheData)]
+        
     return TheData
 
 def _todict(matobj):

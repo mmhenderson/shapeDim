@@ -4,11 +4,12 @@ import pandas as pd
 import scipy.stats
 import scipy.io as spio
 
-
-root = '/usr/local/serenceslab/maggie/shapeDim/'
-
-sys.path.append(os.path.join(root, 'Analysis'))
 from code_utils import file_utils
+
+# root directory is 2 dirs up from this file
+path = os.path.realpath(__file__).split('/')
+root = '/'+os.path.join(*path[0:-3])
+# root = /usr/local/serenceslab/maggie/shapeDim/
 
 
 def load_main_task_data(ss, make_time_resolved = True):
