@@ -28,4 +28,4 @@ n_threads=8
 
 # python3 -c 'from decoding import decode_multiclass; decode_multiclass.decode_allmaintask('${debug}', '${n_threads}')'
 
-python3 -c 'from decoding import decode_multiclass; decode_multiclass.decode_alltasks('${debug}', '${n_threads}')'
+python3 -c 'from decoding import decode_multiclass; decode_multiclass.decode_withintask('${debug}', '${n_threads}')'

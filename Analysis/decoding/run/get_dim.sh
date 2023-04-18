@@ -26,6 +26,4 @@ cd ${ROOT}Analysis/decoding/
 debug=0
 n_threads=8
 
-# python3 -c 'from decoding import decode_multiclass; decode_multiclass.decode_allmaintask('${debug}', '${n_threads}')'
-
-python3 -c 'from decoding import decode_multiclass; decode_multiclass.decode_alltasks('${debug}', '${n_threads}')'
+python3 -c 'from decoding import dimensionality; dimensionality.compute_shattering_dim('${debug}', '${n_threads}')'
