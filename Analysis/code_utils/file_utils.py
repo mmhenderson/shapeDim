@@ -286,3 +286,61 @@ def get_actual_behav_scripts_silh_task():
             with open(filename_write, 'w') as f:
                 for line in lines:
                     f.write(line + '\r\n')
+
+                    
+def get_actual_behav_scripts_training_task():
+    
+    """
+    From each subject's saved data file, create an .m file that contains the
+    final version of the script used during their experiment. This is in 
+    the field TheData(1).p.MyScript.
+    """
+
+    root = '/usr/local/serenceslab/maggie/shapeDim/'
+    
+    path_save = os.path.join(root,'ExpScriptsMRI','ActualVersions')
+    if not os.path.exists(path_save):
+        os.makedirs(path_save)
+
+    sublist = [1,2,3,4,5,6,7]
+    subinits = ['S%02d'%ss for ss in sublist]
+
+    for si, ss in enumerate(sublist):
+
+        subinit = subinits[si]
+        behav_data_folder = os.path.join(root, 'DataBehavior', subinit)
+
+        for ses in ['Training']:
+
+            datadir = os.path.join(behav_data_folder,ses);
+
+            # look at all data in the folder, figure out the date of the sess
+            alldat = os.listdir(os.path.join(datadir))
+            alldat = [d for d in alldat if 'MainTask' in d]
+            
+            if len(alldat)>0:
+                filename = os.path.join(datadir, alldat[0])
+                sess_date = alldat[0].split('.mat')[0][-6:]
+            else:
+                print('missing task for %s %s'%(subinit, ses))
+                continue
+                
+            print('loading from %s'%filename)
+            try:
+                TheData = load_mat_behav_data(filename)
+            except:
+                print('skipping %s'%subinit)
+                continue
+                
+                
+            p = TheData[0]['p']
+            
+            # print(p['MyScript'])
+
+            lines = p['MyScript'].split('\r\n')
+            filename_write = os.path.join(path_save, '%s_MainTask_TrainingSession_%s.m'%(subinit, sess_date))
+            print('writing to %s'%filename_write)
+            
+            with open(filename_write, 'w') as f:
+                for line in lines:
+                    f.write(line + '\r\n')
