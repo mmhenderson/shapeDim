@@ -12,7 +12,7 @@ root = '/'+os.path.join(*path[0:-3])
 # root = /usr/local/serenceslab/maggie/shapeDim/
 
 
-def load_main_task_data(ss, make_time_resolved = True):
+def load_main_task_data(ss, make_time_resolved = True, use_bigIPS = False):
     
     """
     Load trial-by-trial data for all main task trials for a single subject (ss)
@@ -22,7 +22,10 @@ def load_main_task_data(ss, make_time_resolved = True):
     returns [main_data, main_data_by_tr, main_labels, roi_names]
     
     """
-    sample_fn = os.path.join(root, 'Samples','SampleFile_S%02d.mat'%ss)
+    if use_bigIPS:
+        sample_fn = os.path.join(root, 'Samples','SampleFile_bigIPS_S%02d.mat'%ss)
+    else:
+        sample_fn = os.path.join(root, 'Samples','SampleFile_S%02d.mat'%ss)
 
     # print('loading from %s'%sample_fn)
 
@@ -230,7 +233,7 @@ def load_main_task_data(ss, make_time_resolved = True):
 
 
 
-def load_repeat_task_data(ss, make_time_resolved = True):
+def load_repeat_task_data(ss, make_time_resolved = True,  use_bigIPS = False):
 
     """
     Load trial-by-trial data for all repeat (one-back) task trials 
@@ -242,7 +245,10 @@ def load_repeat_task_data(ss, make_time_resolved = True):
     returns [rep_data, rep_data_by_tr, rep_labels, roi_names]
 
     """
-    sample_fn = os.path.join(root, 'Samples','SampleFile_S%02d.mat'%ss)
+    if use_bigIPS:
+        sample_fn = os.path.join(root, 'Samples','SampleFile_bigIPS_S%02d.mat'%ss)
+    else:
+        sample_fn = os.path.join(root, 'Samples','SampleFile_S%02d.mat'%ss)
 
     # print('loading from %s'%sample_fn)
 
