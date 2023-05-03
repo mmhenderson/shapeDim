@@ -19,7 +19,9 @@ def compute_shattering_dim(debug=False, n_threads=8):
     
     print('debug = %s, n_threads = %d'%(debug, n_threads))
     
-    subjects = np.arange(1,8)
+    # subjects=[1,2,3,4]
+    subjects=[5,6,7]
+    # subjects = np.arange(1,8)
     n_subjects = len(subjects)
     n_rois = 11
     make_time_resolved=False
@@ -61,9 +63,11 @@ def compute_shattering_dim(debug=False, n_threads=8):
     
     # store the decoding performance, for each dichotomy
     n_tasks = 4
-    acc_each_dichotomy = np.zeros((n_subjects, n_rois, n_tasks, n_dich))
     
     for si, ss in enumerate(subjects):
+        
+        acc_each_dichotomy = np.zeros((n_rois, n_tasks, n_dich))
+    
         
         main_data = maindat_all[si]
         main_labels = mainlabs_all[si]
@@ -155,19 +159,20 @@ def compute_shattering_dim(debug=False, n_threads=8):
                     elapsed = time.time() - st
                     print('acc = %.2f, elapsed = %.5f s'%(acc, elapsed))
 
-                    acc_each_dichotomy[si, ri, ti, di] = acc
+                    acc_each_dichotomy[ri, ti, di] = acc
     
-                
-    save_folder = os.path.join(root, 'Analysis', 'decoding_results')
-    if not os.path.exists(save_folder):
-        os.makedirs(save_folder)
-    save_filename = os.path.join(save_folder, 'shattering_dim.npy')
-    print('saving to %s'%save_filename)
-    np.save(save_filename, {'acc_each_dichotomy': acc_each_dichotomy, \
-                            'c_value': c, \
-                           'grid_pts': grid_pts, \
-                           'roi_names': roi_names, \
-                           })    
+
+        save_folder = os.path.join(root, 'Analysis', 'decoding_results')
+        if not os.path.exists(save_folder):
+            os.makedirs(save_folder)
+        # save_filename = os.path.join(save_folder, 'shattering_dim.npy')
+        save_filename = os.path.join(save_folder, 'S%02d_shattering_dim.npy'%ss)
+        print('saving to %s'%save_filename)
+        np.save(save_filename, {'acc_each_dichotomy': acc_each_dichotomy, \
+                                'c_value': c, \
+                               'grid_pts': grid_pts, \
+                               'roi_names': roi_names, \
+                               })    
     
 def get_all_dichotomies(n_pts):
     

@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --open-mode=append
 #SBATCH --output=./sbatch_output/output-%A-%x-%u.out 
-#SBATCH --time=7-00:00:00
+#SBATCH --time=1-00:00:00
 
 echo $SLURM_JOBID
 echo $SLURM_NODELIST
@@ -26,7 +26,4 @@ cd ${ROOT}Analysis/decoding/
 debug=0
 n_threads=8
 
-# python3 -c 'from decoding import decode_multiclass; decode_multiclass.decode_allmaintask('${debug}', '${n_threads}')'
-
-# python3 -c 'from decoding import decode_multiclass; decode_multiclass.decode_alltasks('${debug}', '${n_threads}')'
-python3 -c 'from decoding import decode_multiclass; decode_multiclass.decode_crosstask('${debug}', '${n_threads}')'
+python3 -c 'from decoding import decode_binary_withintask; decode_binary_withintask.decode('${debug}', '${n_threads}')'

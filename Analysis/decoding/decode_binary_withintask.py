@@ -4,17 +4,37 @@ from matplotlib import cm
 import os, sys
 import pandas as pd
 import sklearn
-import sklearn.svm, sklearn.discriminant_analysis
+import sklearn.svm, sklearn.discriminant_analysis, sklearn.linear_model
 import time
 
-root = '/usr/local/serenceslab/maggie/shapeDim/'
 
-sys.path.append(os.path.join(root, 'Analysis'))
+# root directory is 2 dirs up from this file
+path = os.path.realpath(__file__).split('/')
+root = '/'+os.path.join(*path[0:-3])
+# root = /usr/local/serenceslab/maggie/shapeDim/
+
 from code_utils import file_utils, data_utils
 from code_utils import decoding_utils
 
-def decode(subjects = np.arange(1,8)):
+def decode_func(X_trn, y_trn, X_tst, c = 0.005, n_threads = 8):
+    
+    # define model
+    model = sklearn.linear_model.LogisticRegression(C = c, \
+                                                    solver='lbfgs', \
+                                                    penalty='l2', \
+                                                    n_jobs = n_threads , \
+                                                    max_iter = 1000)
+    model.fit(X_trn, y_trn)
+    pred = model.predict(X_tst)
+    
+    return pred
 
+
+def decode(debug=False, n_threads=8, use_bigIPS=False):
+
+    print('debug = %s, n_threads = %d, use_bigIPS=%s'%(debug, n_threads, use_bigIPS))
+    
+    subjects = np.arange(1,8)
     n_subj = len(subjects)
 
     task_names = ['Linear (1)','Linear (2)','Checker'];
@@ -39,7 +59,7 @@ def decode(subjects = np.arange(1,8)):
         # si = 0; ss = 1;
 
         print('loading S%02d, main task'%ss)
-        main_data, _, main_labels, roi_names = data_utils.load_main_task_data(ss, make_time_resolved)
+        main_data, _, main_labels, roi_names = data_utils.load_main_task_data(ss, make_time_resolved, use_bigIPS)
 
         for ri in range(n_rois):
             # subtract mean across voxels each trial
@@ -49,7 +69,7 @@ def decode(subjects = np.arange(1,8)):
         mainlabs_all += [main_labels]
 
         print('loading S%02d, repeat task'%ss)
-        rep_data, _, rep_labels, roi_names = data_utils.load_repeat_task_data(ss, make_time_resolved)
+        rep_data, _, rep_labels, roi_names = data_utils.load_repeat_task_data(ss, make_time_resolved, use_bigIPS)
 
         for ri in range(n_rois):
             # subtract mean across voxels each trial
@@ -61,7 +81,7 @@ def decode(subjects = np.arange(1,8)):
     # now do the decoding, one subject/ROI at a time
     
     # decode_func = decode_func_svc
-    decode_func = decoding_utils.decode_func_lda
+    # decode_func = decoding_utils.decode_func_lda
     # decode_func = decode_func_normeucdist
 
     acc = np.zeros((n_subj, n_rois, n_tasks+1, n_bounds))
@@ -77,6 +97,7 @@ def decode(subjects = np.arange(1,8)):
         for ri in range(n_rois):
 
             print('proc S%02d, %s'%(ss, roi_names[ri]))
+            sys.stdout.flush()
             st = time.time()
 
             for ti in range(n_tasks):
@@ -160,10 +181,13 @@ def decode(subjects = np.arange(1,8)):
 
             elapsed = time.time() - st
             print('elapsed time: %.5f s'%elapsed)
-            
+            sys.stdout.flush()
             
     save_folder = os.path.join(root, 'Analysis', 'decoding_results')
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
-    save_filename = os.path.join(save_folder, 'decode_binary_within_task.npy')
+    if use_bigIPS:
+        save_filename = os.path.join(save_folder, 'decode_binary_within_task_bigIPS.npy')
+    else:
+        save_filename = os.path.join(save_folder, 'decode_binary_within_task.npy')
     np.save(save_filename, acc)

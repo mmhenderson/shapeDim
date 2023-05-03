@@ -5,7 +5,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --open-mode=append
 #SBATCH --output=./sbatch_output/output-%A-%x-%u.out 
-#SBATCH --time=1-00:00:00
+#SBATCH --time=7-00:00:00
 
 echo $SLURM_JOBID
 echo $SLURM_NODELIST
