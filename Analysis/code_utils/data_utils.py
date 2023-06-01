@@ -11,8 +11,26 @@ path = os.path.realpath(__file__).split('/')
 root = '/'+os.path.join(*path[0:-3])
 # root = /usr/local/serenceslab/maggie/shapeDim/
 
+def load_main_task_labels(ss):
+    
+    behav_fn = os.path.join(root, 'DataBehavior', 'S%02d'%ss, \
+                                          'S%02d_maintask_preproc_all.csv'%ss)
+    # print('loading from %s'%behav_fn)
+    bdat = pd.read_csv(behav_fn, index_col=0)
 
-def load_main_task_data(ss, make_time_resolved = True, use_bigIPS = False):
+    return bdat
+
+def load_repeat_task_labels(ss):
+    
+    behav_fn = os.path.join(root, 'DataBehavior', 'S%02d'%ss, \
+                                          'S%02d_reptask_preproc_all.csv'%ss)
+    # print('loading from %s'%behav_fn)
+    bdat = pd.read_csv(behav_fn, index_col=0)
+
+    return bdat
+
+
+def load_main_task_data(ss, make_time_resolved = True, use_bigIPS = False, concat_IPS = False):
     
     """
     Load trial-by-trial data for all main task trials for a single subject (ss)
@@ -64,6 +82,7 @@ def load_main_task_data(ss, make_time_resolved = True, use_bigIPS = False):
     nTrialsPerRun = 48;
 
     roi_names = samples['ROI_names']
+    
     n_rois = len(roi_names)
     n_hemis = len(samples['hemis'])
 
@@ -226,14 +245,36 @@ def load_main_task_data(ss, make_time_resolved = True, use_bigIPS = False):
         main_data_by_tr += [dat_by_tr]
         
 
+    if concat_IPS:
+
+        # going to combine all the 4 ips subregions together
+        # attempting to boost signal since these areas are small in some subjects.
+        # the rois will now go:
+        # ['V1','V2','V3','V3AB','hV4','LO1','LO2','IPSall']
+        ips_roi = [5,6,7,8]
+
+        roi_names = roi_names[0:5] + roi_names[9:] + ['IPSall']
+        n_rois = len(roi_names)
+
+        main_data_new = main_data[0:5] + main_data[9:]
+        ips_concat = np.concatenate([main_data[rr] for rr in ips_roi], axis=1)
+        main_data_new += [ips_concat]  
+        main_data = main_data_new
+
+        if make_time_resolved:
+            main_data_by_tr_new = main_data_by_tr[0:5] + main_data_by_tr[9:]
+            ips_concat = np.concatenate([main_data_by_tr[rr] for rr in ips_roi], axis=2)
+            main_data_by_tr_new += [ips_concat]  
+            main_data_by_tr = main_data_by_tr_new
+
     main_labels = bdat; # these will be trial-wise labels for each trial
 
-
+    
     return main_data, main_data_by_tr, main_labels, roi_names
 
 
 
-def load_repeat_task_data(ss, make_time_resolved = True,  use_bigIPS = False):
+def load_repeat_task_data(ss, make_time_resolved = True,  use_bigIPS = False, concat_IPS = True):
 
     """
     Load trial-by-trial data for all repeat (one-back) task trials 
@@ -445,6 +486,30 @@ def load_repeat_task_data(ss, make_time_resolved = True,  use_bigIPS = False):
         rep_data_by_tr += [dat_by_tr]
 
 
+        
+    if concat_IPS:
+
+        # going to combine all the 4 ips subregions together
+        # attempting to boost signal since these areas are small in some subjects.
+        # the rois will now go:
+        # ['V1','V2','V3','V3AB','hV4','LO1','LO2','IPSall']
+        ips_roi = [5,6,7,8]
+
+        roi_names = roi_names[0:5] + roi_names[9:] + ['IPSall']
+        n_rois = len(roi_names)
+
+        rep_data_new = rep_data[0:5] + rep_data[9:]
+        ips_concat = np.concatenate([rep_data[rr] for rr in ips_roi], axis=1)
+        rep_data_new += [ips_concat]  
+        rep_data = rep_data_new
+
+        if make_time_resolved:
+            rep_data_by_tr_new = rep_data_by_tr[0:5] + rep_data_by_tr[9:]
+            ips_concat = np.concatenate([rep_data_by_tr[rr] for rr in ips_roi], axis=2)
+            rep_data_by_tr_new += [ips_concat]  
+            rep_data_by_tr = rep_data_by_tr_new
+
+            
     rep_labels = bdat; # these will be trial-wise labels for each trial
 
 

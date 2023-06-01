@@ -26,4 +26,5 @@ cd ${ROOT}Analysis/decoding/
 debug=0
 n_threads=8
 
-python3 -c 'from decoding import decode_binary_withintask; decode_binary_withintask.decode('${debug}', '${n_threads}')'
+# echo $debug
+python3 -c 'from decoding import fit_ordinal_regress; fit_ordinal_regress.fit_withintask('${debug}', '${n_threads}')'

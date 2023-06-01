@@ -25,8 +25,5 @@ cd ${ROOT}Analysis/decoding/
 
 debug=0
 n_threads=8
-use_bigIPS=1
 
-# python3 -c 'from decoding import decode_multiclass; decode_multiclass.decode_allmaintask('${debug}', '${n_threads}')'
-
-python3 -c 'from decoding import decode_binary_withintask; decode_binary_withintask.decode('${debug}', '${n_threads}','${use_bigIPS}')'
+python3 -c 'from decoding import decode_binary; decode_binary.decode_withintask('${debug}', '${n_threads}')'

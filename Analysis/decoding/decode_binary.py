@@ -30,9 +30,9 @@ def decode_func(X_trn, y_trn, X_tst, c = 0.005, n_threads = 8):
     return pred
 
 
-def decode(debug=False, n_threads=8, use_bigIPS=False):
+def decode_withintask(debug=False, n_threads=8):
 
-    print('debug = %s, n_threads = %d, use_bigIPS=%s'%(debug, n_threads, use_bigIPS))
+    print('debug = %s, n_threads = %d'%(debug, n_threads))
     
     subjects = np.arange(1,8)
     n_subj = len(subjects)
@@ -48,8 +48,8 @@ def decode(debug=False, n_threads=8, use_bigIPS=False):
                     [[1, 3], [2, 4]]];
 
     make_time_resolved = False
-
-    n_rois = 11
+    use_bigIPS = True; 
+    concat_IPS = True;
     
     # first load all data for all subjects, both tasks
     maindat_all = []; repdat_all = []
@@ -59,8 +59,9 @@ def decode(debug=False, n_threads=8, use_bigIPS=False):
         # si = 0; ss = 1;
 
         print('loading S%02d, main task'%ss)
-        main_data, _, main_labels, roi_names = data_utils.load_main_task_data(ss, make_time_resolved, use_bigIPS)
-
+        main_data, _, main_labels, roi_names = data_utils.load_main_task_data(ss, make_time_resolved, \
+                                                                              use_bigIPS, concat_IPS)
+        n_rois = len(roi_names)
         for ri in range(n_rois):
             # subtract mean across voxels each trial
             main_data[ri] -= np.tile(np.mean(main_data[ri], axis=1, keepdims=True), [1, main_data[ri].shape[1]])
@@ -69,7 +70,8 @@ def decode(debug=False, n_threads=8, use_bigIPS=False):
         mainlabs_all += [main_labels]
 
         print('loading S%02d, repeat task'%ss)
-        rep_data, _, rep_labels, roi_names = data_utils.load_repeat_task_data(ss, make_time_resolved, use_bigIPS)
+        rep_data, _, rep_labels, roi_names = data_utils.load_repeat_task_data(ss, make_time_resolved, \
+                                                                              use_bigIPS, concat_IPS)
 
         for ri in range(n_rois):
             # subtract mean across voxels each trial
@@ -186,8 +188,5 @@ def decode(debug=False, n_threads=8, use_bigIPS=False):
     save_folder = os.path.join(root, 'Analysis', 'decoding_results')
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
-    if use_bigIPS:
-        save_filename = os.path.join(save_folder, 'decode_binary_within_task_bigIPS.npy')
-    else:
-        save_filename = os.path.join(save_folder, 'decode_binary_within_task.npy')
+    save_filename = os.path.join(save_folder, 'decode_binary_within_task.npy')
     np.save(save_filename, acc)
