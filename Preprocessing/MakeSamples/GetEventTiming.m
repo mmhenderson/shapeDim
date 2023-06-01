@@ -5,7 +5,7 @@ function [] =  GetEventTiming(sub2do)
 
     % MMH 9/5/18
 
-    clear
+    % clear
     close all
 
     if nargin<1
@@ -267,13 +267,16 @@ function [] =  GetEventTiming(sub2do)
             fprintf('loading from %s\n',fn2load)
             load(fn2load);
 
-            for run = 1:nRunsPerSess
-
-                if run>length(TheData)
-                    fprintf('missing run %d for %s sess %d\n', run, substr, sess)
-                    continue
+            n_runs_do = length(TheData);
+            if n_runs_do~=nRunsPerSess
+                fprintf('TheData is %d runs long for %s sess %d\n', n_runs_do, substr, sess)
+                % continue
+                if (ss==6) && (sess==3)
+                    fprintf('skipping run 5 (no mri data)\n')
+                    n_runs_do = 4;
                 end
-
+            end
+            for run = 1:n_runs_do
 
                 nRuns = nRuns + 1;
 
