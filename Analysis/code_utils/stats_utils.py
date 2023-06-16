@@ -188,3 +188,30 @@ def numpy_corrcoef_warn(a,b):
         print('There are nans in correlation coefficient')
     
     return cc
+
+
+
+def paired_ttest_nonpar(vals1, vals2, n_iter=1000, rndseed=None):
+    
+    if rndseed is None:
+        rndseed = int(time.strftime('%M%H%d', time.localtime()))
+    np.random.seed(rndseed)
+        
+    real_diff = np.mean(vals1-vals2)    
+    
+    shuff_diffs = np.zeros((n_iter,))
+    
+    for ii in range(n_iter):
+        
+        shuff_vals = np.array([vals1, vals2])
+        # randomly swap the positions of values within a pair, with 50% prob
+        which_swap = np.random.normal(0,1,[len(vals1),])>0
+        shuff_vals[:,which_swap] = np.flipud(shuff_vals[:, which_swap])
+    
+        shuff_diffs[ii] = np.mean(shuff_vals[0,:]-shuff_vals[1,:])
+    
+    # pvalue for two-tailed test
+    pval_twotailed = np.minimum( np.mean(shuff_diffs<=real_diff), \
+                                 np.mean(shuff_diffs>=real_diff)) * 2
+    
+    return pval_twotailed, real_diff
