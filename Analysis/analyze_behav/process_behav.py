@@ -6,7 +6,7 @@ import pandas as pd
 root = '/usr/local/serenceslab/maggie/shapeDim/'
 
 sys.path.append(os.path.join(root, 'Analysis'))
-from code_utils import file_utils
+from code_utils import file_utils, grid_utils
 
 
 def preproc_main_task(sublist = np.arange(1,8)):
@@ -50,9 +50,17 @@ def preproc_main_task(sublist = np.arange(1,8)):
         bdat = pd.DataFrame(columns=['sub','sess','part', 'run_in_part','run_overall',\
                                      'task','map','run_difficulty', \
                                      'trial_in_run','trial_overall', \
-                                     'rt','correct_resp','resp','timeout', 
-                                     'category_unmapped', 'dist_from_bound_signed', 'resp_unmapped', \
-                                     'is_main_grid', 'ptx','pty','quadrant'])
+                                     'rt','correct_resp','resp','timeout',\
+                                     'category_unmapped', 'resp_unmapped', \
+                                     'subject_correct',\
+                                     'is_main_grid', \
+                                     'ptx','pty','quadrant', \
+                                     'dist_from_center',\
+                                     'dist_from_bound1',\
+                                     'dist_from_bound2',\
+                                     'dist_from_bound3',\
+                                     'categ_task1','categ_task2','categ_task3',
+                                     ])
 
         # figure out which counter-balance condition this subject was in
         cb_ind = np.mod(ss,3);
@@ -178,43 +186,63 @@ def preproc_main_task(sublist = np.arange(1,8)):
                         
                         ptx = p['points'][tr][0]
                         pty = p['points'][tr][1]
-                        center = 2.5 # define quadrant for each grid pt
-                        if (ptx>center) & (pty>center):
-                            quadrant = 1;
-                        elif (ptx<center) & (pty>center):
-                            quadrant = 2
-                        elif (ptx<center) & (pty<center):
-                            quadrant = 3
-                        elif (ptx>center) & (pty<center):
-                            quadrant = 4
+                        pt = np.array([[ptx,pty]])
+                        quadrant = grid_utils.get_quadrant(pt)
+                        
                         assert(p['quadrant'][tr]==quadrant)
                             
+                        dist_from_bound1 = grid_utils.get_dist_from_bound(pt, 1)
+                        dist_from_bound2 = grid_utils.get_dist_from_bound(pt, 2)
+                        dist_from_bound3 = grid_utils.get_dist_from_bound(pt, 3)
+                        dist_from_center = grid_utils.get_dist_from_center(pt)
+                        
+                        categ_task1 = grid_utils.get_categ(pt, 1)
+                        categ_task2 = grid_utils.get_categ(pt, 2)
+                        categ_task3 = grid_utils.get_categ(pt, 3)
+                        
+                        
                         # define which category was which - for mapping 2, this
                         # would have been reversed relative to mapping 1, so make
                         # them the same again.
-                        if (curr_map)==2:
+                        if (curr_map)==1:
                             category_unmapped = 3-p['category'][tr]
                         else:
                             category_unmapped = p['category'][tr]
 
-                        if curr_task<3:
-                            sign = np.int(np.array(p['points'])[tr,curr_task-1]>center);
-                            if sign==0:
-                                sign = -1;
-                            dist_from_bound = np.round(p['dist_from_bound'][tr],1);
-                        else:
-                            sign = np.nan; dist_from_bound = np.nan
+                        if curr_task==1:
+                            assert(category_unmapped==categ_task1)
+                        elif curr_task==2:
+                            assert(category_unmapped==categ_task2)
+                        elif curr_task==3:
+                            assert(category_unmapped==categ_task3)
+                            
+#                         if curr_task<3:
+#                             sign = np.int(np.array(p['points'])[tr,curr_task-1]>center);
+#                             if sign==0:
+#                                 sign = -1;
+#                             dist_from_bound = np.round(p['dist_from_bound'][tr],1);
+#                         else:
+#                             sign = np.nan; dist_from_bound = np.nan
 
                         # resp_cat is which category their response
                         # indicated, which is swapped on different
                         # mappings. Make them the same again.
                         if ~timeout[tr]:
                             if (curr_map)==1:
-                                resp_unmapped = resp;
-                            else:
                                 resp_unmapped = 3-resp;
+                            else:
+                                resp_unmapped = resp;
                         else:
                             resp_unmapped = np.nan
+                            
+                        # check that the correctness labels are accurate
+                        if resp_unmapped==category_unmapped:
+                            assert(resp==correct_resp)
+                            subject_correct = True
+                        else:
+                            assert(resp!=correct_resp)
+                            subject_correct = False
+                        
 
                         bdat = bdat.append(pd.DataFrame({'sub': ss, \
                                                          'sess': ses+1, \
@@ -226,17 +254,30 @@ def preproc_main_task(sublist = np.arange(1,8)):
                                                         'run_difficulty': run_difficulty, \
                                                         'trial_in_run': tr+1, \
                                                         'trial_overall': np.int(tc+1), \
+                                                         
                                                         'rt': rt, \
                                                         'correct_resp': correct_resp, \
                                                         'resp': resp, \
                                                         'timeout': timeout[tr], \
+                                                         
                                                         'category_unmapped': category_unmapped,
-                                                        'dist_from_bound_signed': dist_from_bound*sign, \
                                                         'resp_unmapped': resp_unmapped, \
+                                                        'subject_correct': subject_correct, \
+                                                         
+                                                        'dist_from_bound1': dist_from_bound1, \
+                                                        'dist_from_bound2': dist_from_bound2, \
+                                                        'dist_from_bound3': dist_from_bound3, \
+                                                        'dist_from_center': dist_from_center, \
+                                                        'categ_task1': categ_task1, \
+                                                        'categ_task2': categ_task2, \
+                                                        'categ_task3': categ_task3, \
+                                                        
                                                         'is_main_grid': is_main_grid, \
                                                         'ptx': ptx, \
                                                         'pty': pty, \
-                                                        'quadrant': quadrant}, \
+                                                        'quadrant': quadrant\
+                                                        }, \
+                                                        
                                                         index=[tc]))
         fn2save = os.path.join(behav_data_folder, '%s_maintask_preproc_all.csv'%(subinit))
         print('writing to %s'%fn2save)
@@ -258,18 +299,29 @@ def preproc_repeat_task(sublist = np.arange(1,8)):
     timeout_pct_cutoff = 0.25;
 
     possible_responses = [1,2]
+    
+    grid_pts = grid_utils.get_main_grid()
 
     for si, ss in enumerate(sublist):
 
         bdat = pd.DataFrame(columns=['sub','sess',\
                                      'run_in_sess', 'run_overall',\
                                      'map','run_difficulty', \
+                                     'task', \
                                      'trial_in_run','trial_overall', \
                                      'rt','correct_resp','resp','timeout', 
+                                     'subject_correct', \
                                      'is_repeat', \
                                      'dist_from_previous',\
                                      'is_main_grid', \
-                                     'ptx','pty', 'quadrant'])
+                                     'is_first_in_run', \
+                                     'ptx','pty', 'quadrant', \
+                                     'nn_ptx','nn_pty', 
+                                     'dist_from_center',\
+                                     'dist_from_bound1',\
+                                     'dist_from_bound2',\
+                                     'dist_from_bound3',\
+                                     'categ_task1','categ_task2','categ_task3'])
         subinit = subinits[si]
         print('\n%s\n'%(subinit))
 
@@ -337,43 +389,94 @@ def preproc_repeat_task(sublist = np.arange(1,8)):
 
                     tc+=1
                     rt = resptime[tr]
-                    correct_resp = p['correct_resp'][tr]
+                    if tr==0:
+                        is_first_in_run = True
+                        assert(p['correct_resp'][tr]==0)
+                        correct_resp = np.nan
+                    else:
+                        is_first_in_run = False
+                        assert(p['correct_resp'][tr]>0)
+                        correct_resp = p['correct_resp'][tr]
+                   
                     is_repeat = p['is_repeat'][tr]
                     resp = response[tr]
+                    if resp==correct_resp:
+                        subject_correct=True
+                    else:
+                        subject_correct=False
 
                     is_main_grid = p['is_main_grid'][tr]
 
                     ptx = p['points'][tr][0]
                     pty = p['points'][tr][1]
-                    center = 2.5 # define quadrant for each grid pt
-                    if (ptx>center) & (pty>center):
-                        quadrant = 1;
-                    elif (ptx<center) & (pty>center):
-                        quadrant = 2
-                    elif (ptx<center) & (pty<center):
-                        quadrant = 3
-                    elif (ptx>center) & (pty<center):
-                        quadrant = 4
+                    pt = np.array([[ptx,pty]])
+                    quadrant = grid_utils.get_quadrant(pt)
                     
-                    dist_from_previous = p['dist_from_previous'][tr]
+                    # find nearest pt in main grid for every pt here
+                    nn_ind = np.argmin(np.sum((pt-grid_pts)**2,axis=1))
+                    nn_ptx = grid_pts[nn_ind,0]
+                    nn_pty = grid_pts[nn_ind,1]
+                    
+                    # checking a bunch of other things here
+                    if is_main_grid or is_repeat:
+                        assert((nn_ptx==ptx) & (nn_pty==pty))
+                    else:
+                        assert(nn_ptx==p['points'][tr-1][0])
+                        assert(nn_pty==p['points'][tr-1][1])
+                    if is_first_in_run:
+                        assert(p['dist_from_previous'][tr]==0)
+                        dist_from_previous = np.nan
+                    else:
+                        xprev = p['points'][tr-1][0]
+                        yprev = p['points'][tr-1][1]
+                        dist_from_previous = p['dist_from_previous'][tr]
+                        d_check = np.sqrt((ptx-xprev)**2 + (pty-yprev)**2)
+                        assert(np.round(d_check,4)==np.round(dist_from_previous, 4))
+                    
+                    # figure out how the current point relates to each categorization boundary
+                    # (relevant for other tasks)
+                    dist_from_bound1 = grid_utils.get_dist_from_bound(pt, 1)
+                    dist_from_bound2 = grid_utils.get_dist_from_bound(pt, 2)
+                    dist_from_bound3 = grid_utils.get_dist_from_bound(pt, 3)
+                    dist_from_center = grid_utils.get_dist_from_center(pt)
 
+                    categ_task1 = grid_utils.get_categ(pt, 1)
+                    categ_task2 = grid_utils.get_categ(pt, 2)
+                    categ_task3 = grid_utils.get_categ(pt, 3)
+                    
+                    
                     bdat = bdat.append(pd.DataFrame({'sub': ss, \
                                                     'sess': ses+1, \
                                                     'run_in_sess': rr+1, \
                                                     'run_overall': rc+1, \
                                                     'map': curr_map, \
                                                     'run_difficulty': run_difficulty, \
+                                                    'task': 4, \
                                                     'trial_in_run': tr+1, \
                                                     'trial_overall': np.int(tc+1), \
                                                     'rt': rt, \
                                                     'correct_resp': correct_resp, \
                                                     'resp': resp, \
                                                     'timeout': timeout[tr], \
+                                                    'subject_correct': subject_correct, \
                                                     'is_repeat': is_repeat, \
                                                     'dist_from_previous': dist_from_previous, \
                                                     'is_main_grid': is_main_grid, \
+                                                    'is_first_in_run': is_first_in_run, \
+                                                     
+                                                    'dist_from_bound1': dist_from_bound1, \
+                                                    'dist_from_bound2': dist_from_bound2, \
+                                                    'dist_from_bound3': dist_from_bound3, \
+                                                    'dist_from_center': dist_from_center, \
+                                                    'categ_task1': categ_task1, \
+                                                    'categ_task2': categ_task2, \
+                                                    'categ_task3': categ_task3, \
+
                                                     'ptx': ptx, \
                                                     'pty': pty, \
+                                                    'nn_ptx': nn_ptx, \
+                                                    'nn_pty': nn_pty, \
+                                                     
                                                     'quadrant': quadrant}, \
                                                     index=[tc]))
 

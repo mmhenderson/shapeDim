@@ -19,7 +19,10 @@ def decode_withintask(debug=False, n_threads=8):
     
     print('debug = %s, n_threads = %d'%(debug, n_threads))
     
-    subjects = np.arange(1,8)
+    if debug:
+        subjects = [1]
+    else:
+        subjects = np.arange(1,8)
     n_subjects = len(subjects)
     make_time_resolved=False
     use_bigIPS = True; 
@@ -71,9 +74,17 @@ def decode_withintask(debug=False, n_threads=8):
     acc_each_cval = np.full((n_subjects, n_rois, n_tasks, n_cv, len(c_values)), np.nan)
     best_cval = np.full((n_subjects, n_rois, n_tasks, n_cv), np.nan)                        
    
-    pred_labs_all = dict()
+    # store the predictions for individual trials
+    preds_all = dict()
+    probs_all = dict()
 
     for si, ss in enumerate(subjects):
+        
+        if debug and (si>0):
+            continue
+     
+        preds_all[si] = dict()
+        probs_all[si] = dict()
         
         # gathering labels for main task and for repeat task.
         main_labels = mainlabs_all[si]
@@ -117,10 +128,7 @@ def decode_withintask(debug=False, n_threads=8):
         task_labs_rep = 4 * np.ones((np.sum(inds_use_rep), ), dtype=int)
         task_labs = np.concatenate([task_labs_main, task_labs_rep], axis=0)
 
-        n_total_trials = len(is_main_grid)
-        
-        pred_labs_all[ss] = np.zeros((n_rois, n_total_trials))
-        
+       
         for ri in range(n_rois):
             
             main_data = maindat_all[si][ri]
@@ -132,6 +140,9 @@ def decode_withintask(debug=False, n_threads=8):
                 continue
             print('proc S%02d, %s'%(ss, roi_names[ri]))
             
+            preds_all[si][ri] = dict()
+            probs_all[si][ri] = dict()
+
             for ti, tt in enumerate([1,2,3,4]):
                 
                 tinds = task_labs==tt
@@ -146,8 +157,10 @@ def decode_withintask(debug=False, n_threads=8):
                 
                 print(' processing task %d: %d total trials'%(tt, dat.shape[0]))
                 
-                # hold the predicted labels for entire dataset
-                pred_labs = np.full(fill_value=np.nan, shape=(np.shape(grid_labs_task)))
+                # hold the predicted labels for this task
+                nt = len(grid_labs_task)
+                pred_labs = np.full(fill_value=np.nan, shape=[nt,])
+                prob_each = np.full(fill_value=np.nan, shape=[nt,n_grid_pts])
 
                 for cvi, cv in enumerate(np.unique(cv_labs_task)):
 
@@ -200,12 +213,21 @@ def decode_withintask(debug=False, n_threads=8):
 
                     # finally, predict on the held-out test data here
                     pred = model.predict(tstdat)
+                    prob = model.predict_proba(tstdat)
+                    # pred is the categorical prediction, prob is continuous
+                    assert(np.all(np.sum(prob, axis=1).round(9)==1))
+                    assert(np.all(np.argmax(prob,axis=1)==pred.astype(int)))
 
                     pred_labs[tstinds] = pred
+                    prob_each[tstinds,:] = prob
 
                 if not debug:
                     assert(not np.any(np.isnan(pred_labs)))
-                pred_labs_all[ss][ri,tinds] = pred_labs
+                    assert(not np.any(np.isnan(prob_each)))
+                
+                # save trial-wise predictions and probability scores
+                preds_all[si][ri][ti] = pred_labs
+                probs_all[si][ri][ti] = prob_each
                 
                 # compute some performance metrics
                 # these are just the "main grid" because easy to compute accuracy
@@ -221,7 +243,8 @@ def decode_withintask(debug=False, n_threads=8):
         print('saving to %s'%save_filename)
         np.save(save_filename, {'acc_bytask': acc_bytask, \
                                'dprime_bytask': dprime_bytask, \
-                               'pred_labs_all': pred_labs_all, \
+                               'preds_all': preds_all, \
+                               'probs_all': probs_all, \
                                'acc_each_cval': acc_each_cval, \
                                'best_cval': best_cval, \
                                'grid_pts': grid_pts, \

@@ -13,6 +13,64 @@ def get_main_grid():
 
     return main_grid_points
 
+def get_quadrant(grid_pts, center = 2.5):
+    
+    # quadrants are numbered counter-clockwise from top right
+    
+    npts = grid_pts.shape[0]
+    quad = np.zeros((npts,))-1
+    
+    quad[(grid_pts[:,0]>center) & (grid_pts[:,1]>center)] = 1
+    quad[(grid_pts[:,0]<center) & (grid_pts[:,1]>center)] = 2
+    quad[(grid_pts[:,0]<center) & (grid_pts[:,1]<center)] = 3
+    quad[(grid_pts[:,0]>center) & (grid_pts[:,1]<center)] = 4
+
+    return quad.astype(int)
+
+def get_categ(grid_pts, task_num):
+
+    assert(np.isin(task_num, [1,2,3]))
+    # tasks are:
+    #  ['Decode: Linear (1)','Decode: Linear (2)','Decode: Checker'];
+    ti = task_num-1
+    # NOTE the category labels (1&2) are swapped here relative to in the experiment script
+    # in these, category 1 = coord<center and category 2 = coord>center
+    # this ordering seems more logical to me
+    quad_groups = [[[2, 3], [1, 4]],
+                    [[3, 4], [1, 2]],
+                    [[2, 4], [1, 3]]];
+    # quad_groups = [[[1, 4], [2, 3]],
+    #                 [[1, 2], [3, 4]],
+    #                 [[1, 3], [2, 4]]];
+
+    quad = get_quadrant(grid_pts)
+    categ_labs_task = np.zeros_like(quad)
+    categ_labs_task[np.isin(quad, quad_groups[ti][0])] = 1
+    categ_labs_task[np.isin(quad, quad_groups[ti][1])] = 2
+    
+    return categ_labs_task
+
+def get_dist_from_bound(grid_pts, task_num, center = 2.5):
+
+    assert(np.isin(task_num, [1,2,3]))
+    # tasks are:
+    #  [Linear (1)','Linear (2)','Checker'];
+    
+    if task_num<3:
+        ti = task_num-1
+        dist = np.abs(grid_pts[:,ti]-center)
+    else:
+        dist = np.min(np.abs(grid_pts-center), axis=1)
+        
+    return dist
+
+def get_dist_from_center(grid_pts, center = 2.5):
+
+    dist = np.sqrt(np.sum((grid_pts-center)**2, axis=1))
+    
+    return dist
+
+
 def get_full_grid():
     
     start = 0;   

@@ -166,24 +166,23 @@ def fit_withintask(debug=False, n_threads=8):
                         trnlabs = (labs_task[trninds]*10).astype(int)
                         assert(len(np.unique(trnlabs))==4)
 
-#                         C = 0.1;
-#                         model_pars = [C, n_threads]
-#                         m = ordinal_regression.ordinal_regress_model(ordinal_regression.get_model)
-                        
                         C = 0.1;
                         model_pars = [C, n_threads]
-                        model = ordinal_regression.get_model(*model_pars)
+                        m = ordinal_regression.ordinal_regress_model(ordinal_regression.get_model)
+                        m.fit(trndat, trnlabs, model_pars)
                         
-                        m = ordinal.OrdinalClassifier(model)
+                        # C = 0.1;
+                        # model_pars = [C, n_threads]
+                        # model = ordinal_regression.get_model(*model_pars)
+                        # m = ordinal.OrdinalClassifier(model)
+                        # m.fit(trndat, trnlabs)
 
-                        m.fit(trndat, trnlabs)
                         pred, prob = m.predict(tstdat)
                         pred = pred/10
                         
                         print(prob[0,:])
                         print(prob.shape)
                         assert(np.all(np.sum(prob, axis=1).round(9)==1))
-
                         
                         # pred is the categorical prediction, prob is continuous
                         pred_labs[tstinds] = pred 
@@ -209,8 +208,8 @@ def fit_withintask(debug=False, n_threads=8):
         save_folder = os.path.join(root, 'Analysis', 'decoding_results')
         if not os.path.exists(save_folder):
             os.makedirs(save_folder)
-        # save_filename = os.path.join(save_folder, 'ordinal_regression_withintask.npy')
-        save_filename = os.path.join(save_folder, 'ordinal_regression_method2_withintask.npy')
+        save_filename = os.path.join(save_folder, 'ordinal_regression_withintask.npy')
+        # save_filename = os.path.join(save_folder, 'ordinal_regression_method2_withintask.npy')
         print('saving to %s'%save_filename)
         np.save(save_filename, {'acc_bytask': acc_bytask, \
                                'dprime_bytask': dprime_bytask, \
