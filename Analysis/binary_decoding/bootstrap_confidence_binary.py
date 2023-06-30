@@ -10,7 +10,7 @@ from code_utils import stats_utils, grid_utils, data_utils, numpy_utils
 
 
 def bootstrap_binary_hardtrials(n_boot_iter = 1000, n_boot_samp = 50, \
-                                rndseed = 234545, correct_only = True):
+                                rndseed = 453454, correct_only = True):
 
     # computing the classifier confidence for "hard" trials in each binary task
     # based on the predictions of multinomial classifier (from decode_multiclass.py)
@@ -18,7 +18,7 @@ def bootstrap_binary_hardtrials(n_boot_iter = 1000, n_boot_samp = 50, \
     
     # load results of multinomial classifier
     save_folder = os.path.join(root, 'Analysis', 'decoding_results')
-    save_filename = os.path.join(save_folder, 'decode_multiclass_withintask.npy')
+    save_filename = os.path.join(save_folder, 'decode_binary_withintask.npy')
     dec_withintask = np.load(save_filename, allow_pickle=True).item()
 
     # specify some parameters
@@ -38,14 +38,6 @@ def bootstrap_binary_hardtrials(n_boot_iter = 1000, n_boot_samp = 50, \
         lab[ss] = pd.concat([main_labels, rep_labels], axis=0)
 
         
-    grid_pts = grid_utils.get_main_grid()
-    # NOTE i am swapping the columns here
-    # because this is the order you get from doing np.unique(pts)
-    # this is the actual order that the predictions 1-16 of this classifier
-    # correspond to. 
-    grid_pts = grid_pts[:,[1,0]] 
-    
-
     # create a set of bins for the shape-space coordinates that are sampled
     # these only span the "hard" part of coordinate space
     n_coord_bins = 6;
@@ -91,7 +83,7 @@ def bootstrap_binary_hardtrials(n_boot_iter = 1000, n_boot_samp = 50, \
             # actual coordinate along the axis of interest
             coord_actual = pt_labs[:,ii].round(2)
             coord_binned = numpy_utils.bin_vals(coord_actual, coord_bin_edges)
-         
+        
             assert(np.all(coord_binned[is_hard]>-1))
 
             if correct_only:
@@ -167,26 +159,19 @@ def bootstrap_binary_hardtrials(n_boot_iter = 1000, n_boot_samp = 50, \
                     # loop over ROIs
                     for ri in range(n_rois):
 
-                        pred = dec_withintask['preds_all'][si][ri][ti].astype(int)
+                        pred = dec_withintask['preds_all'][si][ri][ti][ii].astype(int)
+                        # switching categs here so that 1=coord<center, 2=coord>center
+                        categ_pred = 3-pred
+                        
+                        prob = dec_withintask['probs_all'][si][ri][ti][ii]
 
-                        # which binary category did the classifier predict?
-                        categ_pred = grid_utils.get_categ(grid_pts[pred,:], ii+1)
-
-                        prob = dec_withintask['probs_all'][si][ri][ti]
-
-                        # "confidence" in assignment to category 2 vs 1
-                        # group the 16 points into categories w/r/t relevant axis
-                        g1 = grid_utils.get_categ(grid_pts, ii+1)==1
-                        p_categ1 = np.sum(prob[:,g1], axis=1)
-                        g2 = grid_utils.get_categ(grid_pts, ii+1)==2
-                        p_categ2 = np.sum(prob[:,g2], axis=1)
-
+                        p_categ1 = prob[:,1]
+                        p_categ2 = prob[:,0]
+                        
                         # signed confidence will be: p(correct) - p(incorrect)
                         signedconf = np.zeros_like(p_categ1)
                         signedconf[categ_actual==1] = p_categ1[categ_actual==1] - p_categ2[categ_actual==1]
                         signedconf[categ_actual==2] = p_categ2[categ_actual==2] - p_categ1[categ_actual==2]                    
-
-
                         d = stats_utils.get_dprime(categ_pred[inds_resamp], categ_actual[inds_resamp])
                         dprime_hardtrials_boot[si,ri,ti,ii,bi] = d;
 
@@ -195,14 +180,16 @@ def bootstrap_binary_hardtrials(n_boot_iter = 1000, n_boot_samp = 50, \
 
     # save this, just because it takes a long time to run
     if correct_only:
-        fn2save = os.path.join(save_folder, 'decode_multiclass_binary_hardtrials_bootstrap_correctonly.npy')
+        fn2save = os.path.join(save_folder, 'decode_binary_hardtrials_bootstrap_correctonly.npy')
     else:
-        fn2save = os.path.join(save_folder, 'decode_multiclass_binary_hardtrials_bootstrap.npy')
+        fn2save = os.path.join(save_folder, 'decode_binary_hardtrials_bootstrap.npy')
         
     np.save(fn2save, {'signedconf_hardtrials_boot': signedconf_hardtrials_boot, \
                       'dprime_hardtrials_boot': dprime_hardtrials_boot, \
                      })
     
+
+
 def bootstrap_binary_hardtrials_include_checker(n_boot_iter = 1000, n_boot_samp = 50, \
                                 rndseed = 668887, correct_only = True):
 
@@ -212,7 +199,7 @@ def bootstrap_binary_hardtrials_include_checker(n_boot_iter = 1000, n_boot_samp 
     
     # load results of multinomial classifier
     save_folder = os.path.join(root, 'Analysis', 'decoding_results')
-    save_filename = os.path.join(save_folder, 'decode_multiclass_withintask.npy')
+    save_filename = os.path.join(save_folder, 'decode_binary_withintask.npy')
     dec_withintask = np.load(save_filename, allow_pickle=True).item()
 
     # specify some parameters
@@ -304,21 +291,28 @@ def bootstrap_binary_hardtrials_include_checker(n_boot_iter = 1000, n_boot_samp 
             un2, counts2 = np.unique(coord_binned[inds2], return_counts=True)
             un3, counts3 = np.unique(coord_binned[inds3], return_counts=True)
 
-            # print(un1, counts1)
-            # print(un2, counts2)
-            # print(un3, counts3)
-            # print(bin_dist[un1], bin_dist[un2], bin_dist[un3])
+#             print(un1, counts1)
+#             print(un2, counts2)
+#             print(un3, counts3)
+#             print(bin_dist[un1], bin_dist[un2], bin_dist[un3])
 
             bins_balance = np.intersect1d(np.intersect1d(un1, un2), un3);
-            
+            # bins_balance = []
+            # for uu in np.union1d(np.union1d(un1, un2), un3):
+            #     d = bin_dist[uu]
+            #     # to use this this bin, both this bin and the one opposite it (across the 
+            #     # boundary) have to be sampled in all tasks
+            #     in1 = (d in bin_dist[un1]) and (-d in bin_dist[un1])
+            #     in2 = (d in bin_dist[un2]) and (-d in bin_dist[un2])
+            #     in3 = (d in bin_dist[un3]) and (-d in bin_dist[un3])
+            #     if in1 and in2 and in3:
+            #         bins_balance += [uu]
+
+            # print(bin_dist[bins_balance])
+
             # checking that the bins we are using represent each category equally
             # assert(np.mean(bin_dist[bins_balance]<0)==0.5)
-            # print(np.mean(bin_dist[bins_balance]<0))
-            
-            # NOTE for this analysis with checker included, there are not enough 
-            # trials to make it perfectly balanced. it is close though (0.4 usually)
-            
-            
+
             # decide how many samples per bin, based on how many bins we have
             n_samp_eachbin = int(np.ceil(n_boot_samp/len(bins_balance)))
 
@@ -353,8 +347,6 @@ def bootstrap_binary_hardtrials_include_checker(n_boot_iter = 1000, n_boot_samp 
                     inds_resamp = np.concatenate(inds_resamp, axis=0)
 
                     # double check resample order
-                    # if bi==0:
-                    #     print(np.mean(categ_actual[inds_resamp]==1))
                     # assert(np.mean(categ_actual[inds_resamp]==1)==0.5)
                     assert(np.all(np.isin(coord_binned[inds_resamp], bins_balance)))
                     counts = np.array([np.sum(coord_binned[inds_resamp]==bn) for bn in bins_balance])
@@ -363,24 +355,20 @@ def bootstrap_binary_hardtrials_include_checker(n_boot_iter = 1000, n_boot_samp 
                     # loop over ROIs
                     for ri in range(n_rois):
 
-                        pred = dec_withintask['preds_all'][si][ri][ti].astype(int)
+                        pred = dec_withintask['preds_all'][si][ri][ti][ii].astype(int)
+                        # switching categs here so that 1=coord<center, 2=coord>center
+                        categ_pred = 3-pred
+                        
+                        prob = dec_withintask['probs_all'][si][ri][ti][ii]
 
-                        # which binary category did the classifier predict?
-                        categ_pred = grid_utils.get_categ(grid_pts[pred,:], ii+1)
-
-                        prob = dec_withintask['probs_all'][si][ri][ti]
-
-                        # "confidence" in assignment to category 2 vs 1
-                        # group the 16 points into categories w/r/t relevant axis
-                        g1 = grid_utils.get_categ(grid_pts, ii+1)==1
-                        p_categ1 = np.sum(prob[:,g1], axis=1)
-                        g2 = grid_utils.get_categ(grid_pts, ii+1)==2
-                        p_categ2 = np.sum(prob[:,g2], axis=1)
+                        p_categ1 = prob[:,1]
+                        p_categ2 = prob[:,0]
 
                         # signed confidence will be: p(correct) - p(incorrect)
                         signedconf = np.zeros_like(p_categ1)
                         signedconf[categ_actual==1] = p_categ1[categ_actual==1] - p_categ2[categ_actual==1]
                         signedconf[categ_actual==2] = p_categ2[categ_actual==2] - p_categ1[categ_actual==2]                    
+
                         # d = stats_utils.get_dprime(categ_pred[inds_resamp], categ_actual[inds_resamp])
                         # dprime_hardtrials_boot[si,ri,ti,ii,bi] = d;
 
@@ -390,16 +378,16 @@ def bootstrap_binary_hardtrials_include_checker(n_boot_iter = 1000, n_boot_samp 
     # save this, just because it takes a long time to run
     if correct_only:
         fn2save = os.path.join(save_folder, \
-                               'decode_multiclass_binary_hardtrials_include_checker_bootstrap_correctonly.npy')
+                               'decode_binary_hardtrials_include_checker_bootstrap_correctonly.npy')
     else:
         fn2save = os.path.join(save_folder, \
-                               'decode_multiclass_binary_hardtrials_include_checker_bootstrap.npy')
+                               'decode_binary_hardtrials_include_checker_bootstrap.npy')
         
     np.save(fn2save, {'signedconf_hardtrials_boot': signedconf_hardtrials_boot, \
                       # 'dprime_hardtrials_boot': dprime_hardtrials_boot, \
                      })
     
- 
+    
     
 def bootstrap_correct_incorrect(n_boot_iter = 1000, n_boot_samp = 100, rndseed = 546466):
     
@@ -410,7 +398,7 @@ def bootstrap_correct_incorrect(n_boot_iter = 1000, n_boot_samp = 100, rndseed =
     
     # load results of multinomial classifier
     save_folder = os.path.join(root, 'Analysis', 'decoding_results')
-    save_filename = os.path.join(save_folder, 'decode_multiclass_withintask.npy')
+    save_filename = os.path.join(save_folder, 'decode_binary_withintask.npy')
     dec_withintask = np.load(save_filename, allow_pickle=True).item()
 
     # specify some parameters
@@ -475,7 +463,7 @@ def bootstrap_correct_incorrect(n_boot_iter = 1000, n_boot_samp = 100, rndseed =
             coord_actual[categ_actual==1] = (-1)*coord_actual[categ_actual==1]
 
             coord_binned = numpy_utils.bin_vals(coord_actual, coord_bin_edges)
-
+                
             assert(np.all(coord_binned[is_hard]>-1))
 
 
@@ -540,23 +528,14 @@ def bootstrap_correct_incorrect(n_boot_iter = 1000, n_boot_samp = 100, rndseed =
                     # get predictions from each ROI, these trials
                     for ri in range(n_rois):
 
-                        pred = dec_withintask['preds_all'][si][ri][ti].astype(int)
+                        pred = dec_withintask['preds_all'][si][ri][ti][ii].astype(int)
+                        # switching categs here so that 1=coord<center, 2=coord>center
+                        categ_pred = 3-pred
+                        
+                        prob = dec_withintask['probs_all'][si][ri][ti][ii]
 
-                        # figure out what points these 16 values correspond to
-                        coords_pred = grid_pts[pred,:].round(2)
-
-                        # binarize the predictions of 16-way classifier into 2 categories
-                        # based on current axis "ii"
-                        categ_pred = grid_utils.get_categ(coords_pred, (ii+1))
-
-                        prob = dec_withintask['probs_all'][si][ri][ti]
-
-                        # "confidence" in assignment to category 2 vs 1
-                        # group the 16 points into categories w/r/t relevant axis
-                        g1 = grid_utils.get_categ(grid_pts, ii+1)==1
-                        p_categ1 = np.sum(prob[:,g1], axis=1)
-                        g2 = grid_utils.get_categ(grid_pts, ii+1)==2
-                        p_categ2 = np.sum(prob[:,g2], axis=1)
+                        p_categ1 = prob[:,1]
+                        p_categ2 = prob[:,0]
 
                         # signed confidence will be: p(correct) - p(incorrect)
                         signedconf = np.zeros_like(p_categ1)
@@ -569,9 +548,10 @@ def bootstrap_correct_incorrect(n_boot_iter = 1000, n_boot_samp = 100, rndseed =
                         signedconf_hardtrials_sepcorrect_boot[si,ri,ti,ci,bi] = np.mean(signedconf[inds_resamp])
     
     # save this, just because it takes a long time to run
-    fn2save = os.path.join(save_folder, 'decode_multiclass_sepcorrect_bootstrap.npy')
+    fn2save = os.path.join(save_folder, 'decode_binary_sepcorrect_bootstrap.npy')
 
     np.save(fn2save, {'signedconf_hardtrials_sepcorrect_boot': signedconf_hardtrials_sepcorrect_boot, \
                       'dprime_hardtrials_sepcorrect_boot': dprime_hardtrials_sepcorrect_boot, \
                      })
+    
     

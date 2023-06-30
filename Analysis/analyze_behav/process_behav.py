@@ -34,6 +34,8 @@ def preproc_main_task(sublist = np.arange(1,8)):
     
     possible_responses = (1,2);
 
+    grid_pts = grid_utils.get_main_grid()
+
     start = 0;    
     stop = 5; 
     center = (stop-start)/2+start;
@@ -55,6 +57,7 @@ def preproc_main_task(sublist = np.arange(1,8)):
                                      'subject_correct',\
                                      'is_main_grid', \
                                      'ptx','pty','quadrant', \
+                                     'nn_ptx','nn_pty', \
                                      'dist_from_center',\
                                      'dist_from_bound1',\
                                      'dist_from_bound2',\
@@ -189,6 +192,15 @@ def preproc_main_task(sublist = np.arange(1,8)):
                         pt = np.array([[ptx,pty]])
                         quadrant = grid_utils.get_quadrant(pt)
                         
+                        # find nearest pt in main grid for every pt here
+                        nn_ind = np.argmin(np.sum((pt-grid_pts)**2,axis=1))
+                        nn_ptx = grid_pts[nn_ind,0]
+                        nn_pty = grid_pts[nn_ind,1]
+
+                        # checking a bunch of other things here
+                        if is_main_grid:
+                            assert((nn_ptx==ptx) & (nn_pty==pty))
+                        
                         assert(p['quadrant'][tr]==quadrant)
                             
                         dist_from_bound1 = grid_utils.get_dist_from_bound(pt, 1)
@@ -275,6 +287,10 @@ def preproc_main_task(sublist = np.arange(1,8)):
                                                         'is_main_grid': is_main_grid, \
                                                         'ptx': ptx, \
                                                         'pty': pty, \
+                                                         
+                                                        'nn_ptx': nn_ptx, \
+                                                        'nn_pty': nn_pty, \
+                                                         
                                                         'quadrant': quadrant\
                                                         }, \
                                                         

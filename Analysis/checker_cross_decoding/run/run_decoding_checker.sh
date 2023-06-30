@@ -2,7 +2,7 @@
 #SBATCH --partition=general
 #SBATCH --gres=gpu:0
 #SBATCH --mem=32G
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=16
 #SBATCH --open-mode=append
 #SBATCH --output=./sbatch_output/output-%A-%x-%u.out 
 #SBATCH --time=1-00:00:00
@@ -21,11 +21,9 @@ ROOT=/cube/neurocube/local/serenceslab/maggie/shapeDim/
 PYTHONPATH=:${ROOT}Analysis/
 
 # go to folder where script is located
-cd ${ROOT}Analysis/
+cd ${ROOT}Analysis/checker_cross_decoding/
 
-debug=1
-# n_threads=8
-n_threads=32
+debug=0
+n_threads=8
 
-# echo $debug
-python3 -c 'from multinomial_decoding import decode_multiclass; decode_multiclass.decode_withintask('${debug}', '${n_threads}')'
+python3 -c 'import decode_checker; decode_checker.decode_withintask('${debug}', '${n_threads}'); exit()'

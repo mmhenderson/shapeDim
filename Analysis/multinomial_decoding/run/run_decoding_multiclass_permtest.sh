@@ -2,10 +2,10 @@
 #SBATCH --partition=general
 #SBATCH --gres=gpu:0
 #SBATCH --mem=32G
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=32
 #SBATCH --open-mode=append
 #SBATCH --output=./sbatch_output/output-%A-%x-%u.out 
-#SBATCH --time=1-00:00:00
+#SBATCH --time=7-00:00:00
 
 echo $SLURM_JOBID
 echo $SLURM_NODELIST
@@ -21,9 +21,13 @@ ROOT=/cube/neurocube/local/serenceslab/maggie/shapeDim/
 PYTHONPATH=:${ROOT}Analysis/
 
 # go to folder where script is located
-cd ${ROOT}Analysis/decoding/
+cd ${ROOT}Analysis/
 
 debug=0
-n_threads=8
+# n_threads=8
+n_threads=32
+n_iter=1000;
+rndseed=345345
 
-python3 -c 'from decoding import decode_binary; decode_binary.decode_withintask('${debug}', '${n_threads}')'
+# echo $debug
+python3 -c 'from multinomial_decoding import decode_multiclass; decode_multiclass.decode_withintask_permutationtest('${debug}', '${n_threads}', '${n_iter}', '${rndseed}')'
