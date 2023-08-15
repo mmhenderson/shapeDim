@@ -1,4 +1,4 @@
-                    % CATEGORY JUDGMENT TASK - SHAPE SPACE 
+% CATEGORY JUDGMENT TASK - SHAPE SPACE 
 % Subject sees a sequence of images - must report the category of each
 % image, according to a two-way division. 
 % There are several divisions that can be used.
@@ -7,7 +7,9 @@
  
 % WRITTEN FOR BEHAVIOR ROOMS AND SCANNER LAPTOP
 % change variable p.scannerlaptop to indicate which situation.
-       
+
+% THIS IS THE VERSION WE USED TO TRAIN SUBJECTS PRIOR TO SCAN SESSIONS
+
 % parameters for MRI task
     % Image size 24 degrees (fills almost entire screen)
     % Image onscreen for 1 second    
