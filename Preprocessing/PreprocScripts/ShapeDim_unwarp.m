@@ -9,8 +9,6 @@ function ShapeDim_unwarp()
 % flag to 1. Finally, this function also writes a log files to your 
 % outpath, specifying the files that went into each unwarping call.
 %
-% inpath =
-% '/mnt/neurocube/local/serenceslab/Rosanne/WM_Distract/DataRaw/S04/Session1'
 
 inpath = '/usr/local/serenceslab/maggie/shapeDim/DataRaw/S06/Session3';
 domoco = false;

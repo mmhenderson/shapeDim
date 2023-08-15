@@ -16,15 +16,15 @@ exp_path = mypath(1:filesepinds(end-nDirsUp+1));
 inID = 'topup.'; % will use this string to look for raw functional data (nifti)
 
 % what do you wanna do?
-WannaCoregister = 1; %1;
-WannaTransform = 1; %1;
-WannaMC = 1; %1;
-WannaDetrend = 1; %1;
+WannaCoregister = 1; 
+WannaTransform = 1; 
+WannaMC = 1;
+WannaDetrend = 1; 
 
-sub_list_big = {'S07'}; % {'S0'};
-sub_doreti_list_big = {'CU'}; % {'BR'};
-all_sessions_big = {[1,2,3]}; % {[1,2,3,4,5]};   % list all sessions that exist for this sub (get merged to runs.list together)
-preproc_sessions_big = {[1,2,3]}; % {[1,2,3,4,5]}; % list the ones you want to do right now (those not done yet)
+sub_list_big = {'S07'}; 
+sub_doreti_list_big = {'CU'}; 
+all_sessions_big = {[1,2,3]}; % list all sessions that exist for this sub (get merged to runs.list together)
+preproc_sessions_big = {[1,2,3]}; % list the ones you want to do right now (those not done yet)
 
 for xx = 1:length(sub_list_big)
 

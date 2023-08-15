@@ -3,9 +3,6 @@ function [] = MakeSampleFile_bigIPS(sub2do, debug)
 %% Make Sample File for shapedim
 % This will be a big .mat file that concatenates data from all runs of 
 % each task, each having the format [nTRsTotal x nVoxels]. 
-% This "sample file" from each task gets further processed by the scripts with 
-% prefix getAvgSignal... into a format that is [nTrials x nVoxels], which
-% then gets used for further analyses.
 % All preprocessing of task data and analysis of the spatial localizer
 % (used for thresholding) are run before this. 
 
@@ -21,7 +18,6 @@ if nargin<1
     sub2do = [1,2,3,4,5,6,7]
 end
 
-
 subinit_big = {'CP','BX','BR','CA','CG','CT','CU'};
 subnum_big = [1,2,3,4,5,6,7];
 
@@ -35,9 +31,6 @@ addpath('/usr/local/freesurfer6/matlab/')   % this folder has the load_nifti fun
 
 % which areas do we want to load voxels from?
 ROI_names = {'V1','V2','V3','V3AB','hV4','IPS0','IPS1','IPS2','IPS3','LO1','LO2'};
-
-% ROI_names = {'V1','V2','V3','V3AB','hV4','IPS0','IPS1','IPS2','IPS3','LO1','LO2',...
-%     'IFS', 'AI-FO', 'iPCS', 'sPCS','sIPS','ACC-preSMA'};
 
 % the actual filenames for the ROIs will have underscores instead of spaces
 ROI_fns = ROI_names;
@@ -354,7 +347,7 @@ for ss = sub2do
         end
         clear tmp
 
-        % Make samplesSWM
+        % Make samplesRep
         fprintf('    one-back task niftis...\n')
         tmp=NaN(nTRs_rep,length(all_vox_concat),length(RunsListRep));
         for run = 1:length(RunsListRep) %for each functional run load the corresponding nifti

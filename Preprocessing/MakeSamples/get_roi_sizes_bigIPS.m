@@ -1,6 +1,8 @@
 function [] = get_roi_sizes()
 
-    %%
+    % this function just counts the number of voxels in ROIs
+    % use MakeSampleFile to actually get data from these ROIs
+    
     clear
     close all
     

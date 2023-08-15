@@ -1,8 +1,7 @@
 function [] =  GetEventTiming(sub2do)
 
     % Get the timing of all events in all runs
-    % saves out a file that is used by MakeSampleFile and by RunGLM_WholeBrain
-
+    
     % MMH 9/5/18
 
     % clear

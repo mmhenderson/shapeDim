@@ -17,16 +17,10 @@ filesepinds = find(mypath==filesep);
 nDirsUp = 2;
 exp_path = mypath(1:filesepinds(end-nDirsUp+1));
 
-% feat_path = [exp_path, 'AnalyzeLocalizer/S', char(subnum), '/feats/AllSessionsFE.gfeat/cope1.feat/'];
 out_path = [exp_path, 'Samples/'];
 beh_path = [exp_path, 'DataBehavior/S', char(subnum), '/'];
 func_path = [exp_path, 'DataPreproc/S', char(subnum), '/'];
 hemis = {'lh', 'rh'};
-
-%--> FS_sbj: needs to be the subject ID in Doreti.
-%--> featdir: Directory where the FEAT output is (this is a .gfeat if
-%    multiple localizer runs were done in a session, or simply a .feat dir
-%    if only one localizer was ran 
 
 
 %% Registration matrix
