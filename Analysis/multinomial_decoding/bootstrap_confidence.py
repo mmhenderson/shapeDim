@@ -120,7 +120,7 @@ def bootstrap_binary_hardtrials(n_boot_iter = 1000, n_boot_samp = 50, \
                 if in1 and in2:
                     bins_balance += [uu]
 
-            # print(bin_dist[bins_balance])
+            print(bin_dist[bins_balance])
 
             # checking that the bins we are using represent each category equally
             assert(np.mean(bin_dist[bins_balance]<0)==0.5)
@@ -153,8 +153,8 @@ def bootstrap_binary_hardtrials(n_boot_iter = 1000, n_boot_samp = 50, \
                     for bn in bins_balance:
                         inds_bin = inds[coord_binned[inds]==bn]
                         assert(len(inds_bin)>0)
-                        # if bi==0:
-                        #     print(len(inds_bin), n_samp_eachbin)
+                        if bi==0:
+                            print(len(inds_bin), n_samp_eachbin)
                         inds_resamp.append(np.random.choice(inds_bin, n_samp_eachbin, replace=True))    
                     inds_resamp = np.concatenate(inds_resamp, axis=0)
 
@@ -313,7 +313,8 @@ def bootstrap_binary_hardtrials_include_checker(n_boot_iter = 1000, n_boot_samp 
             
             # checking that the bins we are using represent each category equally
             # assert(np.mean(bin_dist[bins_balance]<0)==0.5)
-            # print(np.mean(bin_dist[bins_balance]<0))
+            print(bin_dist[bins_balance])
+            print(np.mean(bin_dist[bins_balance]<0))
             
             # NOTE for this analysis with checker included, there are not enough 
             # trials to make it perfectly balanced. it is close though (0.4 usually)
@@ -347,14 +348,14 @@ def bootstrap_binary_hardtrials_include_checker(n_boot_iter = 1000, n_boot_samp 
                     for bn in bins_balance:
                         inds_bin = inds[coord_binned[inds]==bn]
                         assert(len(inds_bin)>0)
-                        # if bi==0:
-                        #     print(len(inds_bin), n_samp_eachbin)
+                        if bi==0:
+                            print(len(inds_bin), n_samp_eachbin)
                         inds_resamp.append(np.random.choice(inds_bin, n_samp_eachbin, replace=True))    
                     inds_resamp = np.concatenate(inds_resamp, axis=0)
 
                     # double check resample order
-                    # if bi==0:
-                    #     print(np.mean(categ_actual[inds_resamp]==1))
+                    if bi==0:
+                        print(np.mean(categ_actual[inds_resamp]==1))
                     # assert(np.mean(categ_actual[inds_resamp]==1)==0.5)
                     assert(np.all(np.isin(coord_binned[inds_resamp], bins_balance)))
                     counts = np.array([np.sum(coord_binned[inds_resamp]==bn) for bn in bins_balance])
@@ -504,7 +505,7 @@ def bootstrap_correct_incorrect(n_boot_iter = 1000, n_boot_samp = 100, rndseed =
                 if in1 and in2:
                     bins_balance += [uu]
 
-            # print(bin_dist[bins_balance])
+            print(bin_dist[bins_balance])
 
             # checking that the bins we are using represent each category equally
             assert(np.mean(bin_dist[bins_balance]<0)==0.5)
@@ -523,8 +524,8 @@ def bootstrap_correct_incorrect(n_boot_iter = 1000, n_boot_samp = 100, rndseed =
                     for bn in bins_balance:
                         inds_bin = inds[coord_binned[inds]==bn]
                         assert(len(inds_bin)>0)
-                        # if bi==0:
-                        #     print(len(inds_bin), n_samp_eachbin)
+                        if bi==0:
+                            print(len(inds_bin), n_samp_eachbin)
                         inds_resamp.append(np.random.choice(inds_bin, n_samp_eachbin, replace=True))    
                     inds_resamp = np.concatenate(inds_resamp, axis=0)
                     # print(len(inds_resamp))

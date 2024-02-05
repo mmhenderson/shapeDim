@@ -3,6 +3,7 @@ import scipy.stats
 import warnings
 import pandas as pd
 import statsmodels
+import statsmodels.stats.multitest
 from statsmodels.stats.anova import AnovaRM
 
 
@@ -448,3 +449,21 @@ def rmanova_3way(dat, dim_names, do_shuffle=False, n_iter=1000, rndseed=None):
        
     
     return anova_table
+
+
+def fdr_keepshape(pvals, alpha=0.05, method='indep'):
+    
+    """
+    This is a wrapper for the fdr function in statsmodels, allows
+    for entering a 2D array and FDR correct all values together.
+    Returns arrays same shape as original.
+    """
+    orig_shape = pvals.shape
+    pvals_reshaped = pvals.ravel()
+    
+    pvals_fdr, masked_fdr = statsmodels.stats.multitest.fdrcorrection(pvals_reshaped, alpha=alpha, method=method)
+    
+    pvals_fdr = np.reshape(pvals_fdr, orig_shape)
+    masked_fdr = np.reshape(masked_fdr, orig_shape)
+    
+    return pvals_fdr, masked_fdr
