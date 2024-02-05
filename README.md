@@ -1,9 +1,8 @@
 Code related to our preprint: 
 
-Henderson, M.M., Serences, J.T., & Rungratsameetaweemana, N. (2023). Dynamic categorization rules alter representations in human visual cortex.
-[bioRxiv](https://doi.org/10.1101/2023.09.11.557257)
+Henderson, M.M., Serences, J.T., & Rungratsameetaweemana, N. (2023). Dynamic categorization rules alter representations in human visual cortex. bioRxiv: https://doi.org/10.1101/2023.09.11.557257
 
-See our OSF repository for data files. 
+See our OSF repository (https://osf.io/fa8jk/) for data files. 
 
 ### Instructions:
 1. Clone this repository: ``` git clone https://github.com/mmhenderson/shapeDim ```
@@ -26,9 +25,13 @@ See our OSF repository for data files.
 * Preprocessing: Matlab code used for preprocessing our data.
 * StimulusGeneration: Matlab code used for image generation.
 
+### Dependencies & version notes:
+* This code was written and tested in Python (3.7.10) installed on Ubuntu (20.04.6 LTS). 
+* All package dependencies are listed in ```package-list.txt```.
 
-Other notes:
+### Other notes:
 
 * In parts of this code we refer to the "Nonlinear" task from our paper as the "Checker" task.
 * This repo includes code for running and analyzing another task called the "Repeat" or "One-Back" task. We didn't include analyses of this task in our paper.
+
   
