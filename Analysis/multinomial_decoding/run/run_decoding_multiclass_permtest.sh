@@ -10,6 +10,10 @@
 echo $SLURM_JOBID
 echo $SLURM_NODELIST
 
+# make sure conda on my path here
+# (this is the version installed in my folder so we can get it on ssrde)
+export PATH="/cube/neurocube/local/serenceslab/maggie/anaconda3/bin:$PATH"
+
 # activate my conda env here
 # need to use full path, this is path to env on SSRDE
 source activate /cube/neurocube/local/serenceslab/maggie/conda_envs/shape_dim
@@ -24,10 +28,12 @@ PYTHONPATH=:${ROOT}Analysis/
 cd ${ROOT}Analysis/
 
 debug=0
+newsubs=1
 # n_threads=8
 n_threads=32
 n_iter=1000;
-rndseed=345345
+# rndseed=345345
+rndseed=232434
 
 # echo $debug
-python3 -c 'from multinomial_decoding import decode_multiclass; decode_multiclass.decode_withintask_permutationtest('${debug}', '${n_threads}', '${n_iter}', '${rndseed}')'
+python3 -c 'from multinomial_decoding import decode_multiclass; decode_multiclass.decode_withintask_permutationtest('${debug}', '${n_threads}', '${n_iter}', '${rndseed}', '${newsubs}')'

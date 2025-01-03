@@ -17,15 +17,21 @@ from code_utils import file_utils, data_utils
 from code_utils import decoding_utils
 from code_utils import stats_utils
 
-def decode_withintask(debug=False, n_threads=8):
+def decode_withintask(debug=False, n_threads=8, newsubs=True):
     
     print('debug = %s, n_threads = %d'%(debug, n_threads))
     print('cpus available = %d'%(effective_n_jobs(-1)))
     
-    if debug:
-        subjects = [1]
+    
+    if newsubs:
+        subjects = np.arange(8,11)
     else:
         subjects = np.arange(1,8)
+        
+    if debug:
+        subjects = subjects[0:1]
+    
+    print(subjects)
     n_subjects = len(subjects)
     make_time_resolved=False
     use_bigIPS = True; 
@@ -246,9 +252,15 @@ def decode_withintask(debug=False, n_threads=8):
         if not os.path.exists(save_folder):
             os.makedirs(save_folder)
         if debug:
-            save_filename = os.path.join(save_folder, 'decode_multiclass_withintask_DEBUG.npy')
+            if newsubs:
+                save_filename = os.path.join(save_folder, 'decode_multiclass_withintask_newsubs_DEBUG.npy')
+            else:
+                save_filename = os.path.join(save_folder, 'decode_multiclass_withintask_DEBUG.npy')
         else:
-            save_filename = os.path.join(save_folder, 'decode_multiclass_withintask.npy')
+            if newsubs:
+                save_filename = os.path.join(save_folder, 'decode_multiclass_withintask_newsubs.npy')
+            else:
+                save_filename = os.path.join(save_folder, 'decode_multiclass_withintask.npy')
         print('saving to %s'%save_filename)
         np.save(save_filename, {'acc_bytask': acc_bytask, \
                                'dprime_bytask': dprime_bytask, \
@@ -263,7 +275,7 @@ def decode_withintask(debug=False, n_threads=8):
 
         
         
-def decode_withintask_permutationtest(debug=False, n_threads=8, n_iter=1000, rndseed=None):
+def decode_withintask_permutationtest(debug=False, n_threads=8, n_iter=1000, rndseed=None, newsubs=True):
     
     if rndseed is None:
         rndseed = int(datetime.datetime.now().strftime('%f'))
@@ -273,10 +285,15 @@ def decode_withintask_permutationtest(debug=False, n_threads=8, n_iter=1000, rnd
     
     np.random.seed(rndseed)
     
-    if debug:
-        subjects = [1]
+    if newsubs:
+        subjects = np.arange(8,11)
     else:
         subjects = np.arange(1,8)
+        
+    if debug:
+        subjects = subjects[0:1]
+    
+    print(subjects)
     n_subjects = len(subjects)
     make_time_resolved=False
     use_bigIPS = True; 
@@ -382,7 +399,7 @@ def decode_withintask_permutationtest(debug=False, n_threads=8, n_iter=1000, rnd
             data = np.concatenate([main_data, rep_data], axis=0)
             print(data.shape)
             
-            if debug & (ri>3):
+            if debug & (ri>1):
                 continue
             print('proc S%02d, %s'%(ss, roi_names[ri]))
             
@@ -471,9 +488,15 @@ def decode_withintask_permutationtest(debug=False, n_threads=8, n_iter=1000, rnd
         if not os.path.exists(save_folder):
             os.makedirs(save_folder)
         if debug:
-            save_filename = os.path.join(save_folder, 'decode_multiclass_withintask_permutationtest_DEBUG.npy')
+            if newsubs:
+                save_filename = os.path.join(save_folder, 'decode_multiclass_withintask_permutationtest_newsubs_DEBUG.npy')
+            else:
+                save_filename = os.path.join(save_folder, 'decode_multiclass_withintask_permutationtest_DEBUG.npy')
         else:
-            save_filename = os.path.join(save_folder, 'decode_multiclass_withintask_permutationtest.npy')
+            if newsubs:
+                save_filename = os.path.join(save_folder, 'decode_multiclass_withintask_permutationtest_newsubs.npy')
+            else:
+                save_filename = os.path.join(save_folder, 'decode_multiclass_withintask_permutationtest.npy')
         print('saving to %s'%save_filename)
         np.save(save_filename, {'acc_bytask': acc_bytask, \
                                # 'dprime_bytask': dprime_bytask, \
@@ -486,4 +509,4 @@ def decode_withintask_permutationtest(debug=False, n_threads=8, n_iter=1000, rnd
     elapsed = et_allsubs - st_allsubs
     print('Took %.6f s for all subs'%(elapsed))
         
-       
+      
