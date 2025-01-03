@@ -15,7 +15,7 @@ See our OSF repository (https://osf.io/fa8jk/) for data files.
 3. Use the notebooks inside ```Analysis/final_analyses_revision``` to reproduce our figures.
 	* At the top of each notebook, be sure to change the variable ```root``` to your local path.
 
-4. If you want to re-run our multivariate classifier analyses from scratch, use ```Analysis/multinomial_decoding/decode_multiclass.py```, and ```Analysis/multinomial_decoding/decode_binary.py```. 
+4. If you want to re-run our multivariate classifier analyses from scratch, use ```Analysis/multinomial_decoding/decode_multiclass.py```, and ```Analysis/binary_decoding/decode_binary.py```. 
 	* You can also skip this (slow) step and just go straight to the jupyter notebooks - the saved decoding results are available as part of the OSF repo (```decoding_results_all.zip```)
 
 ### Contents:
