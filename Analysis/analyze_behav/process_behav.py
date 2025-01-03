@@ -9,7 +9,7 @@ sys.path.append(os.path.join(root, 'Analysis'))
 from code_utils import file_utils, grid_utils
 
 
-def preproc_main_task(sublist = np.arange(1,8)):
+def preproc_main_task(sublist = np.arange(1,11)):
     
     subinits = ['S%02.f'%ss for ss in sublist]
     nSubj = len(sublist)
@@ -131,7 +131,7 @@ def preproc_main_task(sublist = np.arange(1,8)):
                 assert(p['which_bound']==curr_task);
                 assert(p['which_mapping']==curr_map)
                 
-                run_difficulty = p['RunDifficulty']
+                # run_difficulty = p['RunDifficulty']
 
                 nTrials = len(TheData[0]['data']['Response'])
 
@@ -148,19 +148,38 @@ def preproc_main_task(sublist = np.arange(1,8)):
                     data = TheData[rr]['data'];
                     t = TheData[rr]['t'];
                     
+                    run_difficulty = p['RunDifficulty']
+                    
                     response = np.array(data['Response']).astype(float)
                     resptime = np.array(t['RespTimeFromOnset'])
+                    
+                    # print(subinit, ses, xx, rr)
+                    if (subinit=='S09') & (ses==2) & (xx==0) & (rr==0):
+                        # session 3, run number 1
+                        # this is a run where the subject had messed up response mapping and this was noted.
+                        # flip the responses back now
+                        print('fixing resp mapping')
+                        print(np.unique(response, return_counts=True))
+                        response_new = 3-response
+                        print(np.unique(response_new, return_counts=True))
+                        response = response_new
+                    # else:
                     
                     # # print(subinit, ses, xx, rr)
                     # if (subinit=='S07') & (ses==2) & (xx==4) & (rr==1):
                     #     # this is a run where the subject had messed up response mapping and this was noted.
                     #     # flip the responses back now
                     #     print('fixing resp mapping')
+                    #     print(np.unique(response, return_counts=True))
                     #     response_new = np.full(fill_value=np.nan, shape=np.shape(response))
                     #     response_new[response==2] = 1
                     #     response_new[response==0] = 2
+                    #     print(np.unique(response_new, return_counts=True))
                     #     response = response_new
-                    # else:
+                    # ^ NOTE I commented out this above fix because we only collected responses for buttons 
+                    # 1 and 2, so it wasn't possible to tell between pressing of "0" and "no response"
+                    # so this wasn't fixable like it would be if they had simply switched buttons
+                    
                     response[np.isnan(resptime)] = np.nan
                     
                     # find trials where subject failed to respond
@@ -302,7 +321,7 @@ def preproc_main_task(sublist = np.arange(1,8)):
         
         
         
-def preproc_repeat_task(sublist = np.arange(1,8)):
+def preproc_repeat_task(sublist = np.arange(1,11)):
 
     # sublist = np.arange(1,8)
     subinits = ['S%02.f'%ss for ss in sublist]
@@ -503,7 +522,7 @@ def preproc_repeat_task(sublist = np.arange(1,8)):
         
 
 
-def preproc_training_sessions(sublist = np.arange(1,8)):
+def preproc_training_sessions(sublist = np.arange(1,11)):
     
     subinits = ['S%02.f'%ss for ss in sublist]
     nSubj = len(sublist)
@@ -556,7 +575,7 @@ def preproc_training_sessions(sublist = np.arange(1,8)):
 
         for pp in range(nPartsTotal):
 
-            if si==0:
+            if ss==1:
                 fn = os.path.join(bdir, '%s_MainTaskMRI_feedback_sess%d_part%d_%s.mat'%\
                               (train_subinit, np.floor(pp/3)+1, np.mod(pp,3)+1, datestr))
             else:
