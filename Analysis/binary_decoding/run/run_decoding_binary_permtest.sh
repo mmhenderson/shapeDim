@@ -2,10 +2,10 @@
 #SBATCH --partition=general
 #SBATCH --gres=gpu:0
 #SBATCH --mem=32G
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=32
 #SBATCH --open-mode=append
 #SBATCH --output=./sbatch_output/output-%A-%x-%u.out 
-#SBATCH --time=1-00:00:00
+#SBATCH --time=7-00:00:00
 
 echo $SLURM_JOBID
 echo $SLURM_NODELIST
@@ -29,8 +29,11 @@ PYTHONPATH=:${ROOT}Analysis/
 cd ${ROOT}Analysis/
 
 debug=0
-n_threads=8
+n_threads=32
+n_iter=1000;
+# n_iter=10
+rndseed=132334
 
-python3 -c 'from binary_decoding import decode_binary; decode_binary.decode_withintask('${debug}', '${n_threads}')'
+python3 -c 'from binary_decoding import decode_binary; decode_binary.decode_withintask_permutationtest('${debug}', '${n_threads}', '${n_iter}', '${rndseed}',)'
 
 # python3 -c 'from binary_decoding import decode_binary; decode_binary.decode_trainrepeat('${debug}', '${n_threads}')'
