@@ -6,9 +6,10 @@ function [] = get_roi_sizes()
     clear
     close all
     
-    subinit_big = {'CP','BX','BR','CA','CG','CT','CU'};
-    subnum_big = [1,2,3,4,5,6,7];
-    sub2do = [1,2,3,4,5,6,7];
+    subinit_big = {'CP','BX','BR','CA','CG','CT','CU','DA','DF','AR'};
+    subnum_big = [1,2,3,4,5,6,7,8,9,10];
+
+    sub2do = [8,9,10];
     
     % find my root directory - up a few dirs from where i am now
     mypath = pwd;

@@ -21,8 +21,13 @@ WannaTransform = 1;
 WannaMC = 1;
 WannaDetrend = 1; 
 
-sub_list_big = {'S07'}; 
-sub_doreti_list_big = {'CU'}; 
+% sub_list_big = {'S08'}; 
+% sub_doreti_list_big = {'DA'};
+% sub_list_big = {'S09'}; 
+% sub_doreti_list_big = {'DF'};
+sub_list_big = {'S10'}; 
+sub_doreti_list_big = {'AR'};
+
 all_sessions_big = {[1,2,3]}; % list all sessions that exist for this sub (get merged to runs.list together)
 preproc_sessions_big = {[1,2,3]}; % list the ones you want to do right now (those not done yet)
 

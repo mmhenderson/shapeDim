@@ -1,16 +1,16 @@
-                % CATEGORY JUDGMENT TASK - SHAPE SPACE     
+                  % CATEGORY JUDGMENT TASK - SHAPE SPACE     
 % Subject sees a sequence of images - must report the category of each
 % image, according to a two-way division. 
-% There ar e several divisions that can be used.
+% There ar   e several divisions that can be used.
 % We'll present two prototype images to remind the subject which images are
 % which.   
  
 % WRITTEN FOR BEHAVIOR ROOMS AND SCANNER LAPTOP
-% change variable p.s                 cannerlaptop to indicate which situation.
+% change variable p.s                 catnnerlaptop to indicate which situation.
         
 % parameters for                   MRI task
     % Image size 24                 degrees (fills almost entire screen)
-    % Image onscreen for 1 second    
+    % Image onscreen for 1 sec        ond    
     % Response period for 1 second (blank)
     % ITI [1-5] seconds jittered
     
@@ -19,6 +19,7 @@
     % total time = 13s blank start + 48*(1+1+3) + 8s blank end 
     %   = 261 seconds or 4:21
     %   with TR=0.8 sec this is 327 TRs.
+    % Prisma: 201 TRs (TR=1.3 sec)
     
 try
     
@@ -50,7 +51,7 @@ try
         'Part (1-3)', 'Run Number (1-3)', 'Training Run? (0 or 1)','Image Set','Difficulty (7-13)','Low-contrast version?'};
     dlgtitle = 'Enter Run Parameters';
     dims = [1 35];
-    definput = {'0','CU       ','7','1                  ','1','1','0','3','9','1 '};
+    definput = {'0','AR','10','1','1','1','0','3','9','1 '};
     answer = inputdlg(prompt,dlgtitle,dims,definput);
     p.debug = str2double(answer{1});
     p.SubInit = answer{2};  
@@ -659,7 +660,7 @@ try
     end
     t.StartTime = GetSecs; 
     
-    KbReleaseWait();
+    KbReleaseWait();t
     
     %% Fixation period before starting the stimuli (for scanner, this is the 12.8 seconds thing)
     FlushEvents('keyDown');

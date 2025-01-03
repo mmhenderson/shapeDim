@@ -15,11 +15,12 @@ if nargin<2
 end
 
 if nargin<1
-    sub2do = [1,2,3,4,5,6,7]
+%     sub2do = [1,2,3,4,5,6,7]
+    sub2do = [8,9,10];
 end
 
-subinit_big = {'CP','BX','BR','CA','CG','CT','CU'};
-subnum_big = [1,2,3,4,5,6,7];
+subinit_big = {'CP','BX','BR','CA','CG','CT','CU','DA','DF','AR'};
+subnum_big = [1,2,3,4,5,6,7,8,9,10];
 
 % find my root directory - up a few dirs from where i am now
 mypath = pwd;
@@ -266,11 +267,22 @@ for ss = sub2do
     
     fprintf('Loading niftis and extracting time courses\n')
     
-    TRditched = 16;
+    if subnum_big(ss)<8
+
+        % GE setup
+        TRditched = 16;
+
+        nTRs_main = 327- TRditched;
+        nTRs_rep = 329 - TRditched;
+
+    else
     
-    nTRs_main = 327- TRditched;
-    nTRs_rep = 329 - TRditched;
-   
+        % Prisma setup
+        nTRs_main = 201;
+        nTRs_rep = 203;
+        
+    end
+
     RunsListMain = []; RunsListRep = [];
     main_sess_list = [];
     main_run_in_sess_list = [];
@@ -323,7 +335,7 @@ for ss = sub2do
     any_change = (length(RunsListMain)~=length(RunsListMainOrig)) || ...
                 ~all(all(RunsListMainOrig==RunsListMain));
     if any_change
-        assert(strcmp(substr, 'S02') || strcmp(substr, 'S07'))
+        assert(strcmp(substr, 'S02') || strcmp(substr, 'S07') || strcmp(substr, 'S09'))
         fprintf('Loading main task runs for %s:\n', substr)
         disp(RunsListMain)
     end

@@ -11,8 +11,8 @@ function [] =  GetEventTiming(sub2do)
         sub2do=[1,2,3,4,5,6,7];
     end
     
-    subinit_big = {'CP','BX','BR','CA','CG','CT','CU'};
-    subnum_big = [1,2,3,4,5,6,7];
+    subinit_big = {'CP','BX','BR','CA','CG','CT','CU','DA','DF','AR'};
+    subnum_big = [1,2,3,4,5,6,7,8,9,10];
     % sub2do = [1,2,3,4,5,6,7];
     % sub2do = [6];
 
@@ -43,13 +43,29 @@ function [] =  GetEventTiming(sub2do)
 
         %% Timing information
 
-        TRdur = .8;
-        TRditched = 16; % 16 TRs were removed
+        if subnum_big(ss)<8
+            % GE setup
+            TRdur = .8;
+            TRditched = 16; % 16 TRs were removed
+            
+            nTRs_main = 327 - TRditched; 
+            nTRs_rep = 329 - TRditched; 
+            
+        else
+            % Prisma setup
+            TRdur = 1.3;
+            TRditched=0;
+            
+            nTRs_main = 201;
+            nTRs_rep = 203;
+            
+        end
+        
         not_recorded = TRdur * TRditched;
-
+            
         %% Main Task
 
-        nRuns = 0; nTRs_main = 327 - TRditched; 
+        nRuns = 0; 
         RunLabels = []; EventLabels = []; TrialLabels = []; SessLabels = [];
         BoundLabels = []; MapLabels = []; 
         PointLabels = []; QuadrantLabels = []; CatLabels = [];
@@ -137,7 +153,7 @@ function [] =  GetEventTiming(sub2do)
                     end
 
                     % Find onset times for all my TRs
-                    TR_onset = 0:.8:nTRs_main*0.8;
+                    TR_onset = 0:TRdur:nTRs_main*TRdur;
                     TR_onset = TR_onset(1:end-1);
 
                     % list everything by TRs
@@ -199,7 +215,15 @@ function [] =  GetEventTiming(sub2do)
                     DiffLabels = [DiffLabels; nan(numZeros,1); TheData(run).p.trial_difficulty(triallabslocal_byTR(numZeros+1:end))];
 
                     RTLabels = [RTLabels; nan(numZeros,1); TheData(run).t.RespTimeFromOnset(triallabslocal_byTR(numZeros+1:end))];
-                    ResponseLabels = [ResponseLabels; nan(numZeros,1); TheData(run).data.Response(triallabslocal_byTR(numZeros+1:end))];
+                    if (ss==9) & (sess==3) & (part==1) & (run==1)
+                        % session 3, run number 1
+                        % this is a run where the subject had messed up response mapping and this was noted.
+                        % flip the responses back now
+                        disp('Flipping resp labels')
+                        ResponseLabels = [ResponseLabels; nan(numZeros,1); 3-TheData(run).data.Response(triallabslocal_byTR(numZeros+1:end))];
+                    else
+                        ResponseLabels = [ResponseLabels; nan(numZeros,1); TheData(run).data.Response(triallabslocal_byTR(numZeros+1:end))];
+                    end
                 end
 
             end %run loop
@@ -237,7 +261,7 @@ function [] =  GetEventTiming(sub2do)
 
         %% Repeat detection (one-back) task
 
-        nRuns = 0; nTRs_rep = 329 - TRditched; 
+        nRuns = 0; 
         RunLabels = []; EventLabels = []; TrialLabels = []; SessLabels = [];
         MapLabels = []; 
         PointLabels = []; IsRepeatLabels = [];
@@ -301,7 +325,7 @@ function [] =  GetEventTiming(sub2do)
                 end
 
                 % Find onset times for all my TRs
-                TR_onset = 0:.8:nTRs_rep*0.8;
+                TR_onset = 0:TRdur:nTRs_rep*TRdur;
                 TR_onset = TR_onset(1:end-1);
 
                 % list everything by TRs

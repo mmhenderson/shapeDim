@@ -6,8 +6,15 @@ clear
 close all 
 
 % set inputs
-FS_sbj = 'CU';
-subnum = '07';
+% FS_sbj = 'CU';
+% subnum = '07';
+% FS_sbj = 'DA';
+% subnum = '08';
+% FS_sbj = 'DF';
+% subnum = '09';
+FS_sbj = 'AR';
+subnum = '10';
+
 silent = 0;
 
 % set paths (end all with filesep!)

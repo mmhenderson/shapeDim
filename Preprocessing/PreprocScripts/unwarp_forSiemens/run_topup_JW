@@ -1,0 +1,379 @@
+#!/bin/csh -f
+#
+# run_topup_serences -- modified from run_topup_hcpfmri in CFMRI_RELEASE_02
+#
+# Pre-process HCP fmri data acquired at CFMRI for TOPUP correction
+#
+#
+# Requires: FSL 5& above tools (TOPUP) from fMRIB 
+#           AFNI tools from NIH
+#  
+# Calls:  several AFNI and FSL commands
+#
+# What this script does:
+#  1) Perform TOPUP distortion correction on HCP fMRI data acquired at CFMRI.
+#
+# Synopsis
+#     run_topup_hcpfmri -d1 <calib1 dir> -d2 <calib2 dir> -i <fmri NIFTI file> [<options>] -o <outstem>
+#
+# Required Arguments
+#     -d1 <Calib1 dir>
+#     -d2 <Calib2 dir>
+#     -i <prefix of the fMRI NIFTI file, without '.nii.gz' > 
+#      (NOTE:  -d1 and -i must have the same phase encoding direction) 
+#     -o <corrected volume filename stem>
+#
+#
+# Optional Arguments
+#     -tmpdir        : specify temporary directory name
+#     -domoco        : no motion correction
+#     -nocleanup     : disables removal of temporary files
+#
+# Outputs
+#     <outstem> - corrected volume filename stem
+#
+#
+# Version History
+#
+# Send Comments/Questions to eghobrial@ucsd.edu or kunlu@ucsd.edu.
+#
+# RGB -- adding a log of topup output
+#
+# VAV 1/30/2017 made these changes from run_topup_hcpfmri:
+#	turned off moco by default (made -nomoco into a -domoco flag)
+#	fixed log output so that it appends to log file in curdir
+#	moved output moco file outside of tmp dir
+#
+# KA 8/2021 made changes for the new Siemens scanner. Instead of loading 
+# the top-up images from the Dicoms, we now use the top up Niftis directly.
+# See: https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/topup/ExampleTopupFollowedByApplytopup
+# for an example.
+
+
+set VERSION = '$Id$';
+set inputargs = ($argv);
+set DateStr = "`date '+%y%m%d%H%M'`"
+set dir1 = (); 
+set dir2 = (); 
+set tmpdir = 'tmp';
+set outstem = ();
+set TR = ();
+set isodd = 0;
+set docleanup = 1;
+set domoco = 0;
+set nslices = 0;
+set nreps = 0;
+set cleanup = 0;
+set PrintHelp = 0;
+set postfix = '.nii.gz';
+set pedir1 = 0;
+set pedir2 = 1;
+set pedir3 = 0;
+set txtfname = 'my_acq_para.txt';
+
+set curdir = `pwd`;
+
+## Log file - VAV
+set logFn=$curdir/"topup_""$DateStr"".log"
+echo writing to log file: $logFn | tee $logFn
+
+if($#argv == 0) goto usage_exit;
+set n = `echo $argv | grep version | wc -l` 
+if($n != 0) then
+  echo $VERSION
+  exit 0;
+endif
+set n = `echo $argv | grep help | wc -l` 
+if($n != 0) then
+  set PrintHelp = 1;
+  goto usage_exit;
+endif
+
+goto parse_args;
+parse_args_return:
+
+goto check_params;
+check_params_return:
+
+
+## Path stuff - VAV
+## Get/Create tmp directory ##
+mkdir -p $tmpdir
+if( ! -e $tmpdir) then
+  echo "ERROR: cannot find tmp dir $tmpdir"
+  exit 1;
+endif 
+
+
+#readout time is set to 1.0 here. The true read out need to be calculated 
+#which will be added later.  This does not affect the TOPUP unwarping, but will 
+#scale the estimated fieldmap.  
+set ro_time = 0.0403
+# KA: 8/2021 changed this to be manually correct!!! 
+
+#echo ""
+#echo "*****INFO: EPI readout time = $ro_time sec ()"
+#echo "WARNING: Did you check that this is correct in your top-up .json file??"
+
+#to3d will read TR from header if TR=0
+# KA 8/2021: Double check that this is true??
+set TR = 0
+
+#start
+
+# Get the b0 images from the topup-niftis
+# Get the first volumes from the first top-up file (p>a)... 
+# Note in og run_topup_serences this was 1 = ap BUT it specifically says to 
+# make sure 1 = the same direction as the functional runs...
+
+echo $curdir/$dir1
+# dir1 is now a .nii.gz file name, not a dicom directory... so jus cd there and load the file
+cd $curdir
+
+# Grab the first volume of this direction top-up
+fslroi $dir1$postfix cal_pa1$postfix 0 1
+
+# move the new b0_cal_pa file to the tmp directory....made this a cp instead of a mv
+cp cal_pa1$postfix $curdir/$tmpdir/cal_pa$postfix
+
+
+# Get the second top-up file...(a>p driection)
+
+echo $curdir/$dir2
+cd $curdir
+
+# Grab the first volume of this direction top-up
+fslroi $dir2$postfix cal_ap1$postfix 0 1
+
+# move the new b0_cal_ap file to the tmp directory....
+cp cal_ap1$postfix $curdir/$tmpdir/cal_ap$postfix
+
+# Move the actual nifti file we want to unwarp to the right tmp folder (tmp/epi)
+
+cd $curdir
+echo $curdir/$dir3$postfix
+
+# Got rid of step checking for odd slices (KA)...
+cp $dir3$postfix $curdir/$tmpdir/epi$postfix
+
+# Now let's get to th emeat of it...
+# Go into the temp directory and run the next step(fslmerge)
+
+cd $curdir/$tmpdir
+#copy the default configuration file
+cp $FSLDIR/etc/flirtsch/b02b0.cnf .
+
+echo "Calling FSL TOPUP (may take a while)"  | tee -a $logFn
+
+#User aquired two calibration scans with reversed polarity and one full EPI
+# Again, KA flipped the directions of these, because the instructions earlier said to make 
+# sure the FIRST one aligns with your functioal data direction (p>a)
+
+fslmerge -t bothb0$postfix cal_pa$postfix cal_ap$postfix  | tee -a $logFn
+pwd
+
+#resample calibration scan if there is a dimension mismatch between the calibration and EPI
+# Check matrix size and resample fmap data if needed (KL):
+set matcal = `fslinfo bothb0$postfix | awk '{if($1 == "dim1") print $2}; {if($1 == "dim2") print $2}; {if($1 == "dim3") print $2}'`
+
+set matepi = `fslinfo epi$postfix | awk '{if($1 == "dim1") print $2}; {if($1 == "dim2") print $2}; {if($1 == "dim3") print $2}'`
+
+if (($matcal[1] != $matepi[1]) || ($matcal[2] != $matepi[2]) || ($matcal[3] != $matepi[3])) then
+echo "**************************** WARNING ****************************************"  | tee  $logFn
+echo "WARNING: calibration data does not match the EPI data !"  | tee -a $logFn
+echo "Resampling the calibration to EPI ... "  | tee -a $logFn
+echo "*****************************************************************************"  | tee  $logFn
+
+set cmd=(3dresample -master  epi$postfix -prefix bothb0_rs$postfix -inset bothb0$postfix)
+echo $cmd  | tee  $logFn
+$cmd
+else
+echo "check ... calibration matches the EPI data ... OK"  | tee -a $logFn
+cp bothb0$postfix bothb0_rs$postfix
+endif
+
+if (! -e $txtfname) then
+    echo "0 1 0 $ro_time" >> $txtfname
+    echo "0 -1 0 $ro_time" >> $txtfname
+endif
+
+# register EPI with calibration scan KL
+	3dvolreg -twopass -twodup -base bothb0_rs$postfix\[{0}\] -prefix epi_regb0$postfix epi${postfix}\[{0}\]  | tee -a $logFn
+
+        if($domoco) then
+        3dvolreg -rotparent epi_regb0$postfix -prefix epi_reg$postfix -base 0 -dfile $curdir/"moco_output_""$dir3"".txt" epi$postfix  | tee -a $logFn
+        else
+        3drotate -rotparent epi_regb0$postfix -prefix epi_reg$postfix epi$postfix  | tee -a $logFn
+        endif
+
+	topup --imain=bothb0_rs$postfix --datain=my_acq_para.txt --config=b02b0.cnf --fout=fmap --iout=b0good --out=my_topup_results -v        | tee -a $logFn
+
+	applytopup --imain=epi_reg --inindex=1 --datain=my_acq_para.txt --topup=my_topup_results --method=jac --interp=spline --out=$outstem  | tee -a $logFn
+
+cd $curdir
+cp $tmpdir/$outstem$postfix .
+
+
+echo "topup done"  | tee -a $logFn
+
+
+
+if($docleanup) then
+  
+  echo "Deleting files in $tmpdir"  | tee -a $logFn
+  rm -rf $tmpdir
+endif
+
+
+exit 0;
+
+
+parse_args:
+set cmdline = ($argv);
+while( $#argv != 0 )
+
+  set flag = $argv[1]; shift;
+
+  switch($flag)
+
+
+    case "-d1":
+      if ( $#argv == 0) goto arg1err;
+      set dir1 = $argv[1]; shift;
+      breaksw
+
+    case "-d2":
+      if ( $#argv == 0) goto arg1err;
+      set dir2 = $argv[1]; shift;
+      breaksw
+
+    case "-i":
+      if ( $#argv == 0) goto arg1err;
+      set dir3 = $argv[1]; shift;
+      breaksw
+
+    case "-o":
+      if ( $#argv == 0) goto arg1err;
+      set outstem = $argv[1]; shift;
+      breaksw
+
+    case "-domoco":
+      set domoco = 1;
+      breaksw
+
+    case "-tmpdir":
+      if ( $#argv == 0) goto arg1err;
+      set tmpdir = $argv[1]; shift;
+      breaksw
+
+    case "-nocleanup":
+      set docleanup = 0;
+      breaksw
+
+
+    default:
+      echo ERROR: Flag $flag unrecognized. 
+      echo $cmdline
+      exit 1
+      breaksw
+  endsw
+
+end
+
+goto parse_args_return;
+############--------------##################
+
+############--------------##################
+check_params:
+ 
+
+  if($#dir1 == 0) then
+    echo "ERROR: must specify the calib1 directory"  | tee -a $logFn
+    exit 1;
+  endif
+if($#dir2 == 0) then
+    echo "ERROR: must specify the calib2 directory"  | tee -a $logFn
+    exit 1;
+  endif
+if($#dir3 == 0) then
+    echo "ERROR: must specify a fMRI NIFTI file"  | tee -a $logFn
+    exit 1;
+  endif
+  if ( ! -e $dir1$postfix) then
+    echo "ERROR: $dir1$postfix does not exist!"  | tee -a $logFn
+    exit 1;
+  endif
+  if ( ! -e $dir2$postfix) then
+    echo "ERROR: $dir2$postfix does not exist!"  | tee -a $logFn
+    exit 1;
+  endif
+if ( ! -e $dir3$postfix) then
+    echo "ERROR: $dir3$postfix does not exist!"  | tee -a $logFn
+    exit 1;
+  endif
+
+
+
+  if($#outstem == 0) then
+    echo "ERROR: must specify an output name"  | tee -a $logFn
+    exit 1;
+  endif
+
+
+goto check_params_return;
+############--------------##################
+
+############--------------##################
+arg1err:
+  echo "ERROR: flag $flag requires one argument"  | tee -a $logFn
+  exit 1
+############--------------##################
+
+
+usage_exit:
+    echo "Name"  | tee -a $logFn
+    echo "     run_topup_serences  - Processes HCP fmri data acquired at CFMRI for TOPUP geometric distortion correction"  | tee -a $logFn
+    echo ""  | tee -a $logFn
+    echo "System requirements"  | tee -a $logFn
+    echo "     AFNI - AFNI_2011 and up, 32bit version or 64bit version"  | tee -a $logFn
+    echo "     FSL  - FSL5.0 and up "  | tee -a $logFn
+    echo "     (Environment Variable FSLOUTPUTTYPE must be set to NIFTI_GZ)"   | tee -a $logFn
+    echo "     (Environment Variable FSLDIR must be set and piont to the FSL installation folder) "  | tee -a $logFn
+    echo ""  | tee -a $logFn
+    echo "Synopsis"  | tee -a $logFn
+    echo "     run_topup_hcpfmri -d1 <calib1 dir> -d2 <calib2 dir> -i <fmri NIFTI file> [<options>] -o <outstem>"  | tee -a $logFn
+    echo ""  | tee -a $logFn
+    echo "Required Arguments"  | tee -a $logFn
+    echo "     -d1 <Calib1 dir>"  | tee -a $logFn
+    echo "     -d2 <Calib2 dir>"   | tee -a $logFn
+    echo "     -i <prefix of the fMRI NIFTI file, without '.nii.gz' > "  | tee -a $logFn
+    echo "      (NOTE:  -d1 and -i must have the same phase encoding direction) "  | tee -a $logFn
+    echo "     -o <corrected volume filename stem>"  | tee -a $logFn
+    echo " "  | tee -a $logFn
+    echo ""  | tee -a $logFn
+    echo "Optional Arguments"  | tee -a $logFn
+    echo "     -tmpdir        : specify temporary directory name"  | tee -a $logFn
+    echo "     -domoco        : include motion correction"  | tee -a $logFn
+    echo "     -nocleanup     : disables removal of temporary files"  | tee -a $logFn
+    echo ""   | tee -a $logFn
+    echo "Outputs"  | tee -a $logFn
+    echo "     <outstem> - corrected volume filename stem"   | tee -a $logFn
+    echo ""  | tee -a $logFn
+    echo "Version"  | tee -a $logFn
+    echo "     "$VERSION  | tee -a $logFn
+    echo ""  | tee -a $logFn
+    echo "Credits"  | tee -a $logFn
+    echo "     FSL library"   | tee -a $logFn
+    echo ""  | tee -a $logFn
+    echo "Reporting Bugs"  | tee -a $logFn
+    echo "     Report bugs to eghobrial@ucsd.edu or kunlu@ucsd.edu"  | tee -a $logFn
+    echo ""  | tee  $logFn
+
+  if($PrintHelp) \
+  cat $0 | awk 'BEGIN{prt=0}{if(prt) print $0; if($1 == "BEGINHELP") prt = 1 }'  | tee  $logFn
+
+exit 1;
+
+
+#---- Everything below here is printed out as part of help -----#
+BEGINHELP
