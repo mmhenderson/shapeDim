@@ -30,7 +30,7 @@ def load_repeat_task_labels(ss):
     return bdat
 
 
-def load_main_task_data(ss, make_time_resolved = True, use_bigIPS = False, concat_IPS = False):
+def load_main_task_data(ss, make_time_resolved = True, use_bigIPS = False, concat_IPS = True):
     
     """
     Load trial-by-trial data for all main task trials for a single subject (ss)
@@ -70,14 +70,31 @@ def load_main_task_data(ss, make_time_resolved = True, use_bigIPS = False, conca
     # print('loading from %s'%behav_fn)
     bdat = pd.read_csv(behav_fn, index_col=0)
 
-    # which TRs am i averaging over? From the target onset time.
-    avgTRs_targ = [4,7];
-    # TRs are 0.8 seconds in length. So this is 3.2 - 5.6 seconds after onset.
-    # TRs go like...TR 0 = 0 seconds, TR 1 = 0.8, seconds, TR 2 = 1.6 seconds, and so on.
-    nTRs_concat = 14;
-    # if we're returning time-resolved data, how many TRs to include per trial?
     
-    nTRs = 327-16;
+    if ss<=7:
+        nTRs = 327-16;
+        # which TRs am i averaging over? From the target onset time.
+        avgTRs_targ = [4,7];
+        # TRs are 0.8 seconds in length. So this is 3.2 - 5.6 seconds after onset.
+        # TRs go like...TR 0 = 0 seconds, TR 1 = 0.8, seconds, TR 2 = 1.6 seconds, and so on.
+        
+        # if we're returning time-resolved data, how many TRs to include per trial?
+        nTRs_concat = 14;
+        
+    else:
+        # Prisma setup
+        nTRs = 201;
+        # adjusting the above numbers to account for different TR length in sec.
+        # the TR is 1.3 seconds with Prisma, so to get the same time window in seconds, we 
+        # want to grab earlier TRs. This is approximate but should be close.
+        # Taking average over a window 4 TRs long, as we did above.
+        avgTRs_targ = [2,5]
+        
+        # if we're returning time-resolved data, how many TRs to include per trial?
+        # again this has to be smaller here
+        nTRs_concat = 9;
+        
+    
     nRunsExpected = 36;
     nTrialsPerRun = 48;
 
@@ -316,14 +333,30 @@ def load_repeat_task_data(ss, make_time_resolved = True,  use_bigIPS = False, co
     # print('loading from %s'%behav_fn)
     bdat = pd.read_csv(behav_fn, index_col=0)
 
-    # which TRs am i averaging over? From the target onset time.
-    avgTRs_targ = [4,7];
-    # TRs are 0.8 seconds in length. So this is 3.2 - 5.6 seconds after onset.
-    # TRs go like...TR 0 = 0 seconds, TR 1 = 0.8, seconds, TR 2 = 1.6 seconds, and so on.
-    nTRs_concat = 14;
-    # if we're returning time-resolved data, how many TRs to include per trial?
-
-    nTRs = 329-16;
+    
+    if ss<=7:
+        nTRs = 329-16;
+        # which TRs am i averaging over? From the target onset time.
+        avgTRs_targ = [4,7];
+        # TRs are 0.8 seconds in length. So this is 3.2 - 5.6 seconds after onset.
+        # TRs go like...TR 0 = 0 seconds, TR 1 = 0.8, seconds, TR 2 = 1.6 seconds, and so on.
+        
+        # if we're returning time-resolved data, how many TRs to include per trial?
+        nTRs_concat = 14;
+    
+    else:
+        # Prisma setup
+        nTRs = 203;
+        # adjusting the above numbers to account for different TR length in sec.
+        # the TR is 1.3 seconds with Prisma, so to get the same time window in seconds, we 
+        # want to grab earlier TRs. This is approximate but should be close.
+        # Taking average over a window 4 TRs long, as we did above.
+        avgTRs_targ = [2,5]
+        
+        # if we're returning time-resolved data, how many TRs to include per trial?
+        # again this has to be smaller here
+        nTRs_concat = 9;
+        
     nRunsExpected = 12;
     nTrialsPerRun = 48;
 
