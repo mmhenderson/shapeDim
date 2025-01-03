@@ -6,7 +6,8 @@ clear
 close all
 
 
-sublist = [1,2,3,4,5,6,7];
+% sublist = [1,2,3,4,5,6,7];
+sublist=[8,9,10];
 my_dir = pwd;
 
 % find my root directory - up a few dirs from where i am now

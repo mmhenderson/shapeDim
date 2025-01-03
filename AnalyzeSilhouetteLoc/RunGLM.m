@@ -6,7 +6,7 @@ clear
 close all
 
 
-sublist = [7];
+sublist = [8,9,10];
 my_dir = pwd;
 % find my root directory - up a few dirs from where i am now
 mypath = pwd;
@@ -17,14 +17,14 @@ exp_path = mypath(1:filesepinds(end-nDirsUp+1));
 subfolder = 'AnalyzeSilhouetteLoc';
 nStims = 1;    % how many stim types (predictors)
 % how many TRs in this kind of run, after trimming?
-nTRs = 328 - 16;
+% nTRs = 328 - 16;
 
 spatial_smoothing = false; % do or don't do 2mm spatial smoothing
 higher_level_FE = true; % do higher level Fixed Effects (if false: does Mixed Effects i.e. FLAME 1).
 
 % usually set these both to 1, but maybe you got stuck somewhere in the
 % middle and need to do HL only.
-doLL = 0;
+doLL = 1;
 doHL = 1;
 % note, the HL analysis only works from this script if your number of localizer
 % runs exactly matches what is in the high_level_design_template.fsf file.
@@ -35,7 +35,17 @@ doHL = 1;
 
 for ss = 1:numel(sublist)
     
+    if sublist(ss)<8
+        % GE setup
+        nTRs = 328 - 16;
+        tr_dur = 0.8;
+    else
+        % Prisma setup
+        nTRs = 202;
+        tr_dur = 1.3;
+    end
     substr = sprintf('S%02d',sublist(ss));
+    fprintf('%s, expect %d TRs\n', substr, nTRs)
     
     % where are the EV files?
     EV_dir = fullfile(exp_path, subfolder, substr, 'EVs');
@@ -135,8 +145,14 @@ for ss = 1:numel(sublist)
                     end
                 end
                 
+                if contains(line, 'set fmri(tr)')
+                    
+                    line = ['set fmri(tr) ' num2str(tr_dur)];
+                    
+                    fprintf([line '\n']);
+                end
+                
                 if contains(line, 'set fmri(npts)')
-                   
                     
                     line = ['set fmri(npts) ' num2str(nTRs)];
                     
