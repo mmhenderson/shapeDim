@@ -143,7 +143,7 @@ def get_actual_behav_scripts():
     if not os.path.exists(path_save):
         os.makedirs(path_save)
 
-    sublist = [1,2,3,4,5,6,7]
+    sublist = [1,2,3,4,5,6,7,8,9,10]
     subinits = ['S%02d'%ss for ss in sublist]
 
     for si, ss in enumerate(sublist):
