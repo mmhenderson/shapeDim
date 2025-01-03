@@ -12,10 +12,10 @@ See our OSF repository (https://osf.io/fa8jk/) for data files.
 	* After unzipping these files, put the folders ```DataBehavior``` and ```Samples``` inside your root directory, on same level as ```Analysis```
 	* Put the folders ``` decoding_results``` and ```image_similarity``` into the ```Analysis``` folder.
 
-3. Use the notebooks inside ```Analysis/final_analyses``` to reproduce our figures.
+3. Use the notebooks inside ```Analysis/final_analyses_revision``` to reproduce our figures.
 	* At the top of each notebook, be sure to change the variable ```root``` to your local path.
 
-4. If you want to re-run our multivariate classifier analyses from scratch, use ```Analysis/multinomial_decoding/decode_multiclass.py```. 
+4. If you want to re-run our multivariate classifier analyses from scratch, use ```Analysis/multinomial_decoding/decode_multiclass.py```, and ```Analysis/multinomial_decoding/decode_binary.py```. 
 	* You can also skip this (slow) step and just go straight to the jupyter notebooks - the saved decoding results are available as part of the OSF repo (```decoding_results_all.zip```)
 
 ### Contents:
