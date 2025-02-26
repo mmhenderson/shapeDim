@@ -79,6 +79,76 @@ def load_samplefile_h5py(sample_fn):
     
     return samples
 
+def load_locvalsfile_h5py(sample_fn):
+
+    """
+    Same as above, but for localizer t-stat vals only
+    """
+    
+    # going to make a dictionary for the elements in the file.
+    # first extract these three keys of interest, these ones are 
+    # relatively straightforward
+    samples = {}
+    keys_do = ['all_vox_concat', 'loc_vals']
+
+    with h5py.File(sample_fn, 'r') as f:
+        for kk in keys_do:
+            # need to convert the element to an np.array
+            samples[kk] = np.array(f[kk])
+
+    # for the element "ROIs", it is a structure array so is more complicated.
+    # going to make a separate dictionary
+    rois_keys = ['voxel_inds', 'is_md','is_motor','is_visual']
+    rois_dict = {}
+    ROI_names = ['V1','V2','V3','V3AB','hV4','IPS0','IPS1','IPS2','IPS3','LO1','LO2'];
+    hemis = ['lh', 'rh'];
+    n_rois = 11; n_hemis = 2;
+
+    # initializing a dictionary to store the info about ROI definitions.
+    for rk in rois_keys:
+        rois_dict[rk] = [[[] for hh in range(n_hemis)] for rr in range(n_rois)]
+    
+    all_vox_list = []
+
+    with h5py.File(sample_fn, 'r') as f:
+
+        # loop over the keys into the "ROIs" element here
+        # (we know in advance what they are)
+        for rk in rois_keys:
+            # each element is [11,2] so loop over the arrays
+            for rr in range(n_rois):
+                for hh in range(n_hemis):
+
+                    # this is the confusing part...
+                    # ref will be a "reference" to the element that we're looking for
+                    # like <HDF5 object reference>
+                    ref = f['ROIs'][rk][rr][hh]
+                
+                    # to get the actual data, we have to use the reference as a key into the 
+                    # original dataset (f), and then convert it into np array.
+                    rois_dict[rk][rr][hh] = np.array(f[ref]).astype(int)
+
+                    if rk=='voxel_inds':
+                        a = np.array(f[ref]).astype(int)
+                        if len(np.shape(a))==2:
+                            all_vox_list += [a]
+                        # else:
+                        #     # skip any that are wrong shape, empty
+                        #     print('missing voxel_inds for %s %s'%(ROI_names[rr], hemis[hh]))
+
+    # double checking that the list of voxels we pulled out is correct and lines up with all_vox_concat
+    # print([av.shape for av in all_vox_list])
+    all_vox_list = np.concatenate(all_vox_list, axis=0)
+    assert(len(np.unique(all_vox_list))==len(all_vox_list))
+    assert(np.all(np.unique(all_vox_list)==samples['all_vox_concat'][:,0]))
+    
+    # put the ROIs into my main dict now, for simplicity
+    samples['ROIs'] = rois_dict
+    samples['ROI_names'] = ROI_names
+    samples['hemis'] = hemis
+    
+    return samples
+
 
 def load_mat_behav_data(filename, varname='TheData'):
     
