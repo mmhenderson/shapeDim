@@ -451,6 +451,86 @@ def rmanova_3way(dat, dim_names, do_shuffle=False, n_iter=1000, rndseed=None):
     return anova_table
 
 
+
+def rmanova_4way(dat, dim_names, do_shuffle=False, n_iter=1000, rndseed=None):
+    
+    # dat is [subjects x nlevels1 x nlevels2 x nlevels3] 
+
+    n_subjects, n_levels1, n_levels2, n_levels3, n_levels4 = dat.shape
+
+    dim1 = dim_names[0]
+    dim2 = dim_names[1]
+    dim3 = dim_names[2]
+    dim4 = dim_names[3]
+
+    class_df = pd.DataFrame(data={'subject': np.repeat(np.arange(n_subjects), n_levels1*n_levels2*n_levels3*n_levels4), \
+                               dim1: np.tile(np.repeat(np.arange(n_levels1), n_levels2*n_levels3*n_levels4),[n_subjects,]), \
+                               dim2: np.tile(np.repeat(np.arange(n_levels2), n_levels3*n_levels4), [n_subjects*n_levels1,]), \
+                               dim3: np.tile(np.repeat(np.arange(n_levels3), n_levels4), [n_subjects*n_levels1*n_levels2,]), \
+                               dim4: np.tile(np.arange(n_levels4), [n_subjects*n_levels1*n_levels2*n_levels3,]) })
+
+
+    class_values = np.zeros((n_subjects*n_levels1*n_levels2*n_levels3*n_levels4,))
+    for si in range(n_subjects):
+        for li1 in range(n_levels1):
+            for li2 in range(n_levels2):
+                for li3 in range(n_levels3):
+                    inds = (class_df['subject']==si) & (class_df[dim1]==li1) & (class_df[dim2]==li2) & (class_df[dim3]==li3)
+                    class_values[inds] = dat[si,li1,li2,li3,:]
+
+    class_df['class_values'] = class_values
+
+    model = AnovaRM(data=class_df, \
+                    depvar='class_values', \
+                    subject='subject', \
+                    within = [dim1, dim2, dim3, dim4],
+                   )
+
+    rm_result = model.fit()
+
+    anova_table = rm_result.anova_table
+
+    if do_shuffle:
+        
+        real_f = np.array(rm_result.anova_table['F Value'])
+        
+        shuff_f = np.zeros((n_iter,15))
+
+        if rndseed is not None:
+            np.random.seed(rndseed)
+    
+        for xx in range(n_iter):
+            
+            shuff_df = class_df.copy(deep=True)
+            orig_v = np.array(shuff_df['class_values'])
+            shuff_v = np.zeros_like(orig_v)
+
+            # shuffle all vals within each subject
+            for si in range(n_subjects):
+                sidx = np.array(shuff_df['subject']==si)
+                v = orig_v[sidx]
+                shuff_v[sidx] = v[np.random.permutation(len(v))]
+
+            shuff_df['class_values'] = shuff_v
+
+            shuff_model = AnovaRM(data=shuff_df, \
+                        depvar='class_values', \
+                        subject='subject', \
+                        within = [dim1, dim2, dim3, dim4],
+                       )
+            
+            shuff_rm_result = shuff_model.fit()
+            shuff_f[xx,:] = np.array(shuff_rm_result.anova_table['F Value'])
+
+        p = np.mean(shuff_f>=real_f, axis=0)
+
+        # add permuted p as another column in table
+        anova_table['p (permutation)'] = p
+       
+    
+    return anova_table
+
+
 def fdr_keepshape(pvals, alpha=0.05, method='indep'):
     
     """
