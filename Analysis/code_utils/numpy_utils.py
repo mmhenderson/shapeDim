@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+from itertools import product
 
 def bin_ydata_by_xdata(xdata, ydata, n_bins, linear_bins=True, remove_nans=True, \
                        return_edges=False, return_std = False, use_unique=False):
@@ -75,3 +77,22 @@ def bin_vals(vals, bin_edges):
         vals_binned[binds] = cb
         
     return vals_binned
+
+
+
+def array_to_dataframe(array, dim_labels):
+    # Get the shape of the array
+    shape = array.shape
+    
+    # Generate all possible index combinations
+    indices = list(product(*[range(s) for s in shape]))
+    
+    # Flatten the array
+    flat_data = array.flatten()
+    
+    # Create a DataFrame
+    df = pd.DataFrame(indices, columns=dim_labels)
+    df['value'] = flat_data
+    
+    return df
+
